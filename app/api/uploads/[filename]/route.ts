@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ filename: string }> },
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
     const { filename } = await params;
@@ -32,12 +32,66 @@ export async function GET(
       path.join("/tmp", "uploads", decodedFilename),
     ];
 
+    // DEBUG: logs temporários para diagnosticar 404 em runtime remoto (n8n)
+    try {
+      console.log("[uploads GET] decodedFilename=", decodedFilename);
+      console.log("[uploads GET] process.cwd()=", process.cwd());
+      console.log("[uploads GET] possiblePaths=");
+      for (const p of possiblePaths) {
+        try {
+          console.log("  -", p, "exists=", fs.existsSync(p));
+        } catch (e) {
+          console.log("  -", p, "exists=? (err)", String(e));
+        }
+      }
+    } catch (debugErr) {
+      console.warn("[uploads GET] debug logging failed", debugErr);
+    }
+
+    // Verificações de existência (para retorno no modo debug)
+    const pathChecks = possiblePaths.map((p) => {
+      try {
+        return { path: p, exists: fs.existsSync(p) };
+      } catch (e) {
+        return { path: p, exists: false, error: String(e) };
+      }
+    });
+
     let filePath: string | null = null;
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        filePath = p;
+    for (const pc of pathChecks) {
+      if (pc.exists) {
+        filePath = pc.path;
         break;
       }
+    }
+
+    // Se solicitado modo debug, retornar diagnóstico (protegido por token em .env)
+    try {
+      // Use request.nextUrl para pegar query params de forma compatível com Next.js
+      console.log("[uploads GET] _req.url=", String(_req.url));
+      console.log("[uploads GET] _req.nextUrl=", JSON.stringify(_req.nextUrl));
+      const debugMode = _req.nextUrl?.searchParams.get("debug");
+      const token = _req.nextUrl?.searchParams.get("token");
+      if (debugMode === "1") {
+        const expected = process.env.UPLOADS_DEBUG_TOKEN;
+        if (!expected || token !== expected) {
+          return NextResponse.json(
+            { error: "Unauthorized (missing/invalid token)" },
+            { status: 403 }
+          );
+        }
+        return NextResponse.json(
+          {
+            decodedFilename,
+            processCwd: process.cwd(),
+            pathChecks,
+            filePathFound: filePath,
+          },
+          { status: 200 }
+        );
+      }
+    } catch (e) {
+      console.warn("[uploads GET] debug-mode check failed", e);
     }
 
     if (!filePath) {
@@ -68,7 +122,7 @@ export async function GET(
     console.error("Erro ao servir arquivo:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
