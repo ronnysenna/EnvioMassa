@@ -11,7 +11,7 @@ export default function RegisterLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-800 to-gray-900 text-gray-100">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {children}
     </div>
   );

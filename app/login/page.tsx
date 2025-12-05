@@ -2,113 +2,128 @@
 
 // biome-ignore assist/source/organizeImports: false positive
 import { useState } from "react";
-import { LogIn } from "lucide-react";
-import Brand from "../../components/Brand";
+import { LogIn, Send } from "lucide-react";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Alert from "@/components/ui/Alert";
+import Link from "next/link";
+import { notifySuccess, notifyError } from "@/lib/notify";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include", // Important: include cookies
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Erro de login");
+        const errorMsg = data.error || "Erro de login";
+        setError(errorMsg);
+        notifyError(errorMsg);
         return;
       }
-      // successful login (cookie set by server)
-      // Force a hard refresh to ensure middleware picks up the new cookie
+      notifySuccess("Login realizado com sucesso!");
       window.location.replace("/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Erro de conexão");
+      const errorMsg = "Erro de conexão";
+      setError(errorMsg);
+      notifyError(errorMsg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-800 to-gray-900 text-gray-100">
-      <div className="bg-white/5 backdrop-blur-sm p-8 rounded-xl shadow-xl w-full max-w-md border border-white/6">
-        <div className="flex justify-center mb-6">
-          <div className="bg-blue-600 p-4 rounded-full">
-            <LogIn size={32} className="text-white" />
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 fade-in">
+      <div className="w-full max-w-md">
+        {/* Logo & Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 mb-4 shadow-lg">
+            <Send size={32} className="text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-[var(--text)] mb-2">
+            Envio Express
+          </h1>
+          <p className="text-[var(--text-muted)] text-lg">
+            Envie mensagens em massa com facilidade
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <div className="card p-8 mb-6">
+          <p className="text-[var(--text)] font-semibold mb-6 text-center text-lg">
+            Faça login para continuar
+          </p>
+
+          {error && (
+            <Alert variant="error" className="mb-6">
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              id="username"
+              type="text"
+              label="Usuário"
+              placeholder="Digite seu usuário"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+
+            <Input
+              id="password"
+              type="password"
+              label="Senha"
+              placeholder="Digite sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              isLoading={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-[var(--border)]">
+            <p className="text-center text-sm text-[var(--text-muted)]">
+              Não tem conta?{" "}
+              <Link
+                href="/register"
+                className="text-[var(--primary)] font-semibold hover:opacity-80 transition-opacity"
+              >
+                Criar conta
+              </Link>
+            </p>
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2">
-          <Brand />
-        </h1>
-        <p className="text-center text-gray-300 mb-6">
-          Faça login para continuar
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-200 mb-1"
-            >
-              Usuário
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 bg-white/6 border border-white/8 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition text-white"
-              placeholder="Digite seu usuário"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-200 mb-1"
-            >
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-white/6 border border-white/8 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition text-white"
-              placeholder="Digite sua senha"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-700/20 border border-red-600/20 text-red-100 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors focus:ring-4 focus:ring-blue-300"
-          >
-            Entrar
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-300">
-          <p className="mt-2">
-            Não tem conta?{" "}
-            <a href="/register" className="text-blue-300 hover:underline">
-              Criar conta
-            </a>
-          </p>
+        {/* Footer Info */}
+        <div className="text-center text-xs text-[var(--text-muted)]">
+          <p>Plataforma segura e confiável para envio em massa</p>
         </div>
       </div>
     </div>

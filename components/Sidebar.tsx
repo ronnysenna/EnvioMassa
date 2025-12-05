@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Home,
   Image as ImageIcon,
@@ -8,9 +9,11 @@ import {
   Tags,
   Users,
   X,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useInstanceStatus } from "@/lib/useInstanceStatus";
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -30,6 +33,12 @@ export default function Sidebar({
   onClose?: () => void;
 } = {}) {
   const pathname = usePathname();
+  const { status, loading } = useInstanceStatus();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -48,62 +57,109 @@ export default function Sidebar({
   };
 
   const sidebarContent = (
-    <div className="w-64 h-full relative flex flex-col bg-[#071224] text-white border-r border-[#0b1220]">
+    <div className="w-64 h-full relative flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-r border-indigo-900/30 shadow-2xl">
       {/* Close button (visible only on mobile overlays) */}
       <button
         type="button"
         aria-label="Fechar menu"
         onClick={onClose ?? undefined}
-        className="md:hidden absolute top-3 right-3 p-2 rounded bg-white/6 text-white hover:bg-white/10"
+        className="md:hidden absolute top-3 right-3 p-2 rounded bg-white/10 text-white hover:bg-white/20 transition-colors"
       >
-        <X size={16} />
+        <X size={20} />
       </button>
-      <div className="p-6 border-b border-[#0b1220]">
-        <h1 className="text-2xl font-bold text-white">
-          <span className="text-blue-500">Envio</span>
-          <span className="mx-1 text-yellow-600 font-extrabold">Express</span>
-        </h1>
-        <div className="text-xs text-gray-300 mt-1">
-          Envie mensagens facilmente
+
+      {/* Header/Logo */}
+      <div className="p-6 border-b border-indigo-900/20 bg-gradient-to-r from-indigo-600/10 to-cyan-600/10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="bg-gradient-to-br from-indigo-500 to-cyan-500 p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+            <Send size={22} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-white">Envio Express</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {mounted && status ? (
+                <>
+                  <div
+                    className={`w-2 h-2 rounded-full ${status.status === "online"
+                      ? "bg-green-400 animate-pulse"
+                      : "bg-red-400"
+                      }`}
+                  />
+                  <span className="text-xs text-slate-400">
+                    {status.status === "online" ? "Online" : "Offline"}
+                    {status.instancia && ` • ${status.instancia}`}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                  <span className="text-xs text-slate-400">Verificando...</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Status warning if offline */}
+        {mounted && status && status.status !== "online" && (
+          <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-700/30 rounded-lg flex items-center gap-2">
+            <AlertCircle size={14} className="text-yellow-400 flex-shrink-0" />
+            <span className="text-xs text-yellow-300">
+              Instância desconectada
+            </span>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 py-6">
+      {/* Navigation */}
+      <nav className="flex-1 py-6 px-3 overflow-y-auto space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
+
+          // Cores diferentes por ícone
+          const iconColors: Record<string, string> = {
+            "/dashboard": "group-hover:text-blue-400 text-blue-300",
+            "/enviar": "group-hover:text-indigo-400 text-indigo-300",
+            "/contatos": "group-hover:text-cyan-400 text-cyan-300",
+            "/grupos": "group-hover:text-emerald-400 text-emerald-300",
+            "/imagem": "group-hover:text-amber-400 text-amber-300",
+          };
 
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => onClose?.()}
-              className={`flex items-center gap-3 px-6 py-3 transition-colors ${isActive ? "bg-[#0b1620] border-l-4 border-blue-500 text-white" : "text-gray-300 hover:bg-[#0b1620]/70"}`}
+              className={`group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 relative ${isActive
+                ? "bg-gradient-to-r from-indigo-600/40 to-cyan-600/40 text-white shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
+                : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                }`}
             >
-              <Icon
-                size={18}
-                className={isActive ? "text-blue-400" : "text-gray-400"}
-              />
-              <span
-                className={`text-sm ${isActive ? "text-white font-medium" : "text-gray-200"}`}
-              >
-                {item.label}
-              </span>
+              <Icon size={20} className={`${iconColors[item.href] || ""} transition-colors`} />
+              <span className="text-sm font-medium">{item.label}</span>
+              {isActive && (
+                <>
+                  <div className="ml-auto w-2 h-2 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-indigo-500 to-cyan-500 rounded-r" />
+                </>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-6 border-t border-[#0b1220]">
+      {/* Footer/Logout */}
+      <div className="p-4 border-t border-indigo-900/20 mt-auto bg-gradient-to-r from-slate-800/30 to-slate-900/30">
         <button
           type="button"
           onClick={() => {
             handleLogout();
           }}
-          className="flex items-center gap-3 w-full px-4 py-2 text-gray-200 hover:bg-red-700/10 rounded"
+          className="flex items-center gap-3 w-full px-4 py-3 text-slate-300 hover:bg-red-600/20 hover:text-red-300 rounded-lg transition-all duration-200 group"
         >
-          <LogOut size={18} className="text-gray-300" />
-          <span className="text-sm">Sair</span>
+          <LogOut size={20} className="group-hover:text-red-400" />
+          <span className="text-sm font-medium">Sair</span>
         </button>
       </div>
     </div>

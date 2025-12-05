@@ -16,6 +16,8 @@
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "busboy": "^1.6.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.546.0",
@@ -25,6 +27,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-window": "^2.2.1",
+    "sonner": "^2.0.7",
     "styled-jsx": "^5.1.0",
     "xlsx": "^0.18.5"
   },

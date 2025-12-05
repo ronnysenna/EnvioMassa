@@ -1,36 +1,144 @@
 "use client";
 
-import { BarChart3, Send, Users } from "lucide-react";
+import { BarChart3, Send, Users, TrendingUp, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Button from "@/components/ui/Button";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import DashboardMetrics from "./metrics";
 
 export default function DashboardPage() {
   return (
     <ProtectedRoute>
-      <main className="flex-1 p-8 bg-transparent min-h-screen">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-(--text) mb-8">Dashboard</h1>
+      <main className="flex-1 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-[var(--text)] mb-2">
+              Bem-vindo de volta!
+            </h1>
+            <p className="text-[var(--text-muted)]">
+              Gerencie seus contatos e envie mensagens em massa facilmente
+            </p>
+          </div>
 
-          {/* Stats Cards */}
+          {/* Metrics */}
           <DashboardMetrics />
 
           {/* Quick Actions */}
-          <div className="card p-6">
-            <h2 className="text-xl font-semibold text-(--text) mb-4">Ações Rápidas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <a href="/enviar" className="p-4 border-2 border-(--border) rounded-lg hover:bg-[rgba(99,102,241,0.03)] transition-colors text-center">
-                <Send className="mx-auto mb-2 text-(--primary)" size={32} />
-                <p className="font-semibold text-(--text)">Enviar Mensagem</p>
-              </a>
-              <a href="/contatos" className="p-4 border-2 border-(--border) rounded-lg hover:bg-[rgba(99,102,241,0.03)] transition-colors text-center">
-                <Users className="mx-auto mb-2 text-(--primary)" size={32} />
-                <p className="font-semibold text-(--text)">Gerenciar Contatos</p>
-              </a>
-              <a href="/imagem" className="p-4 border-2 border-(--border) rounded-lg hover:bg-[rgba(99,102,241,0.03)] transition-colors text-center">
-                <BarChart3 className="mx-auto mb-2 text-(--primary)" size={32} />
-                <p className="font-semibold text-(--text)">Upload de Imagem</p>
-              </a>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Link href="/enviar">
+              <Card interactive className="group cursor-pointer h-full">
+                <CardContent className="flex flex-col items-center text-center py-6">
+                  <div className="bg-indigo-100 p-4 rounded-lg mb-4 group-hover:bg-indigo-200 transition-colors">
+                    <Send className="text-indigo-600" size={32} />
+                  </div>
+                  <h3 className="font-semibold text-lg text-[var(--text)] mb-1">
+                    Enviar Mensagem
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">
+                    Envie mensagens para seus contatos
+                  </p>
+                  <ArrowRight className="text-indigo-600 group-hover:translate-x-1 transition-transform" size={20} />
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/contatos">
+              <Card interactive className="group cursor-pointer h-full">
+                <CardContent className="flex flex-col items-center text-center py-6">
+                  <div className="bg-cyan-100 p-4 rounded-lg mb-4 group-hover:bg-cyan-200 transition-colors">
+                    <Users className="text-cyan-600" size={32} />
+                  </div>
+                  <h3 className="font-semibold text-lg text-[var(--text)] mb-1">
+                    Gerenciar Contatos
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">
+                    Organize e gerencie sua base
+                  </p>
+                  <ArrowRight className="text-cyan-600 group-hover:translate-x-1 transition-transform" size={20} />
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/grupos">
+              <Card interactive className="group cursor-pointer h-full">
+                <CardContent className="flex flex-col items-center text-center py-6">
+                  <div className="bg-emerald-100 p-4 rounded-lg mb-4 group-hover:bg-emerald-200 transition-colors">
+                    <BarChart3 className="text-emerald-600" size={32} />
+                  </div>
+                  <h3 className="font-semibold text-lg text-[var(--text)] mb-1">
+                    Criar Grupos
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">
+                    Organize contatos em grupos
+                  </p>
+                  <ArrowRight className="text-emerald-600 group-hover:translate-x-1 transition-transform" size={20} />
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {/* Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader
+                title="💡 Dicas"
+                description="Aproveite melhor o sistema"
+              />
+              <CardContent className="space-y-3">
+                <div className="flex gap-3">
+                  <span className="text-indigo-600 font-bold">1.</span>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Organize seus contatos em grupos para facilitar envios em massa
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-indigo-600 font-bold">2.</span>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Use imagens para tornar suas mensagens mais atrativas
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-indigo-600 font-bold">3.</span>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Confirme sempre antes de enviar para muitos contatos
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader
+                title="📊 Sobre"
+                description="Sistema de Envio em Massa"
+              />
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--text-muted)]">Versão</span>
+                  <span className="font-semibold text-[var(--text)]">1.0.0</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--text-muted)]">Status</span>
+                  <span className="badge badge-success gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Online
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+                  <span className="text-sm text-[var(--text-muted)]">Suporte</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      window.open("https://wa.me/5585991904540", "_blank");
+                    }}
+                  >
+                    Contatar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

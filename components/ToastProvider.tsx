@@ -1,49 +1,74 @@
 "use client";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext } from "react";
+import { Toaster, toast } from "sonner";
+import { CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 
 type Toast = {
-  id: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "warning";
   message: string;
+  description?: string;
 };
 
 type ToastContextValue = {
-  showToast: (t: Omit<Toast, "id">) => void;
+  showToast: (t: Toast) => void;
+  success: (message: string, description?: string) => void;
+  error: (message: string, description?: string) => void;
+  info: (message: string, description?: string) => void;
+  warning: (message: string, description?: string) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+const iconMap = {
+  success: <CheckCircle className="w-5 h-5" />,
+  error: <AlertCircle className="w-5 h-5" />,
+  info: <Info className="w-5 h-5" />,
+  warning: <AlertTriangle className="w-5 h-5" />,
+};
 
-  const showToast = useCallback(({ type, message }: Omit<Toast, "id">) => {
-    const id = String(Date.now()) + Math.random().toString(36).slice(2, 7);
-    const t: Toast = { id, type, message };
-    setToasts((s) => [t, ...s]);
-    setTimeout(() => {
-      setToasts((s) => s.filter((x) => x.id !== id));
-    }, 4000);
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const showToast = useCallback(({ type, message, description }: Toast) => {
+    const toastProps = {
+      icon: iconMap[type],
+      description,
+    };
+
+    switch (type) {
+      case "success":
+        toast.success(message, toastProps);
+        break;
+      case "error":
+        toast.error(message, toastProps);
+        break;
+      case "warning":
+        toast.warning(message, toastProps);
+        break;
+      case "info":
+      default:
+        toast.info(message, toastProps);
+        break;
+    }
   }, []);
 
+  const contextValue: ToastContextValue = {
+    showToast,
+    success: (message, description) => showToast({ type: "success", message, description }),
+    error: (message, description) => showToast({ type: "error", message, description }),
+    info: (message, description) => showToast({ type: "info", message, description }),
+    warning: (message, description) => showToast({ type: "warning", message, description }),
+  };
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
-      <div className="fixed top-6 right-6 z-50 flex flex-col gap-3">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`max-w-sm w-full px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 transition-opacity animate-fade-in ${
-              t.type === "success"
-                ? "bg-green-50 border border-green-200 text-green-800"
-                : t.type === "error"
-                  ? "bg-red-50 border border-red-200 text-red-800"
-                  : "bg-gray-50 border border-gray-200 text-gray-800"
-            }`}
-          >
-            <div className="flex-1 text-sm">{t.message}</div>
-          </div>
-        ))}
-      </div>
+      <Toaster
+        position="top-right"
+        theme="light"
+        richColors
+        expand
+        closeButton
+        visibleToasts={3}
+      />
     </ToastContext.Provider>
   );
 }
@@ -51,11 +76,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    // Durante prerender ou quando usado fora do provider, retornar um fallback silencioso
+    // Fallback silencioso durante prerender
     return {
-      showToast: (_: Omit<Toast, "id">) => {
-        // noop
-      },
+      showToast: (_: Toast) => { },
+      success: (_: string) => { },
+      error: (_: string) => { },
+      info: (_: string) => { },
+      warning: (_: string) => { },
     } as ToastContextValue;
   }
   return ctx;
