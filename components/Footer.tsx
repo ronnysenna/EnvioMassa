@@ -7,7 +7,7 @@ export default function Footer() {
         <span>
           Desenvolvido por{" "}
           <span className="font-medium text-gray-800 dark:text-white">
-            Ronny Senna
+            Ideal Soluçoes Tecnologicas
           </span>
         </span>
         <a

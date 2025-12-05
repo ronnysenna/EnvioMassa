@@ -16,6 +16,7 @@ export default function ContatosPage() {
   // estados para adicionar contato manualmente
   const [manualName, setManualName] = useState("");
   const [manualPhone, setManualPhone] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
   const [manualPhoneValid, setManualPhoneValid] = useState<boolean>(false);
   // Estados para modal de edição
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -173,8 +174,13 @@ export default function ContatosPage() {
   const handleAddManual = async () => {
     const nome = manualName.trim();
     const telefone = normalizePhone(manualPhone.trim());
+    const email = manualEmail.trim() || undefined;
     if (!telefone) {
       showToast({ type: "error", message: "Telefone é obrigatório." });
+      return;
+    }
+    if (!nome) {
+      showToast({ type: "error", message: "Nome é obrigatório." });
       return;
     }
     try {
@@ -182,7 +188,7 @@ export default function ContatosPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ nome, telefone }),
+        body: JSON.stringify({ nome, telefone, email }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -195,6 +201,7 @@ export default function ContatosPage() {
       showToast({ type: "success", message: "Contato adicionado." });
       setManualName("");
       setManualPhone("");
+      setManualEmail("");
       fetchContacts("", page, perPage);
     } catch (err) {
       console.error("add manual contact", err);
@@ -205,6 +212,7 @@ export default function ContatosPage() {
   const handleClearManual = () => {
     setManualName("");
     setManualPhone("");
+    setManualEmail("");
   };
 
   // Função para abrir modal de edição
@@ -344,6 +352,16 @@ export default function ContatosPage() {
                 value={manualPhone}
                 onChange={handleManualPhoneChange}
                 className="px-3 py-2 border rounded"
+              />
+            </div>
+            <div className="mt-3">
+              <input
+                id="manual-email"
+                type="email"
+                placeholder="E-mail (opcional)"
+                value={manualEmail}
+                onChange={(e) => setManualEmail(e.target.value)}
+                className="w-full px-3 py-2 border rounded"
               />
             </div>
             <div className="mt-1">

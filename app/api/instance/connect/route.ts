@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getWebhookUrl } from "@/lib/webhooks";
 
 // Cache em memória para armazenar dados da instância
 let instanceData = {
@@ -9,10 +10,6 @@ let instanceData = {
   connecting: false,
 };
 
-const STATUS_WEBHOOK_URL =
-  process.env.N8N_WEBHOOK_URL ||
-  "https://n8n.ronnysenna.com.br/webhook/verificarInstancia";
-
 /**
  * GET /api/instance/connect
  * Retorna o status atual da instância — agora consulta o webhook de verificação para obter o estado real.
@@ -20,7 +17,8 @@ const STATUS_WEBHOOK_URL =
 export async function GET() {
   try {
     // Tentar buscar diretamente do webhook de verificação (n8n)
-    const res = await fetch(STATUS_WEBHOOK_URL, { method: "GET" });
+    const statusWebhookUrl = getWebhookUrl("VERIFICAR_INSTANCIA");
+    const res = await fetch(statusWebhookUrl, { method: "GET" });
     if (res.ok) {
       const contentType = res.headers.get("content-type") ?? "";
       let json: Record<string, unknown> = {};
@@ -156,16 +154,14 @@ export async function POST(request: NextRequest) {
     const action = (body?.action ?? "connect") as string;
 
     if (action === "disconnect") {
-      const DISCONNECT_WEBHOOK =
-        process.env.N8N_DISCONNECT_WEBHOOK ||
-        "https://n8n.ronnysenna.com.br/webhook/desconectarinstancia";
+      const disconnectWebhookUrl = getWebhookUrl("DESCONECTAR_INSTANCIA");
 
-      console.log(`🔌 Chamando webhook de desconexão: ${DISCONNECT_WEBHOOK}`);
+      console.log(`🔌 Chamando webhook de desconexão: ${disconnectWebhookUrl}`);
 
       // opcional: enviar nome da instância para o webhook
       const payload = { instancia: instanceData.instancia };
 
-      const resp = await fetch(DISCONNECT_WEBHOOK, {
+      const resp = await fetch(disconnectWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -207,16 +203,14 @@ export async function POST(request: NextRequest) {
     }
 
     // fallback: comportamento de conectar (existing implementation)
-    const webhookUrl =
-      process.env.N8N_CONNECT_WEBHOOK ||
-      "https://n8n.ronnysenna.com.br/webhook/conectarinstancia";
+    const connectWebhookUrl = getWebhookUrl("CONECTAR_INSTANCIA");
 
-    console.log(`🔗 Chamando webhook de conexão: ${webhookUrl}`);
+    console.log(`🔗 Chamando webhook de conexão: ${connectWebhookUrl}`);
 
     instanceData.connecting = true;
     instanceData.lastUpdate = new Date().toISOString();
 
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(connectWebhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

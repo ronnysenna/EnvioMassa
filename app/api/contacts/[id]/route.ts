@@ -13,7 +13,7 @@ export async function PUT(_req: Request, context: NextContextWithParams) {
     const user = await requireUser();
     const contactId = parseInt(params.id, 10);
     const body = await _req.json();
-    const { nome, telefone } = body;
+    const { nome, telefone, email } = body;
 
     const contact = await prisma.contact.findUnique({
       where: { id: contactId },
@@ -23,10 +23,15 @@ export async function PUT(_req: Request, context: NextContextWithParams) {
     if (contact.userId !== user.id)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const data: Partial<{ nome: string; telefone: string }> = {};
+    const data: Partial<{
+      nome: string;
+      telefone: string;
+      email: string | null;
+    }> = {};
     if (typeof nome === "string") data.nome = nome;
     if (typeof telefone === "string")
       data.telefone = telefone.replace(/\D/g, "");
+    if (typeof email === "string") data.email = email.trim() || null;
 
     const updated = await prisma.contact.update({
       where: { id: contactId },

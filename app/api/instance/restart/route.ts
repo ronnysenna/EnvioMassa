@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
+import { getWebhookUrl } from "@/lib/webhooks";
 
 export async function POST() {
   try {
-    const res = await fetch(
-      "https://n8n.ronnysenna.com.br/webhook/reiniciarInstancia",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    const restartWebhookUrl = getWebhookUrl("REINICIAR_INSTANCIA");
+    const res = await fetch(restartWebhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
 
     if (!res.ok) {
       throw new Error(`N8N webhook error: ${res.status}`);

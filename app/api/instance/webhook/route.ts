@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-
-const N8N_WEBHOOK_URL =
-  "https://n8n.ronnysenna.com.br/webhook/verificarInstancia";
+import { getWebhookUrl } from "@/lib/webhooks";
 
 export async function GET() {
   try {
-    const res = await fetch(N8N_WEBHOOK_URL, { method: "GET" });
+    const webhookUrl = getWebhookUrl("VERIFICAR_INSTANCIA");
+    const res = await fetch(webhookUrl, { method: "GET" });
     const text = await res.text();
 
     // Log server-side para ajudar no debug (ver payload cru do n8n)
