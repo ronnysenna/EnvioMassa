@@ -14,8 +14,9 @@ interface InstanceModalProps {
 }
 
 export default function InstanceModal({ isOpen, onClose, refetchStatus }: InstanceModalProps) {
-    const { instance, loading, error, connect, restart, disconnect, refetch } = useInstanceManager();
+    const { data: instance, loading, error, connect, restart, disconnect, fetchStatus } = useInstanceManager();
     const [showQR, setShowQR] = useState(false);
+    const [userTriggeredConnection, setUserTriggeredConnection] = useState(false);
     const prevStatusRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -25,6 +26,7 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
 
         if (isOpen && prev !== "online" && current === "online") {
             setShowQR(false);
+            setUserTriggeredConnection(false); // Reset when connected
             refetchStatus?.();
             onClose();
         }
@@ -33,10 +35,19 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
         prevStatusRef.current = current;
     }, [instance?.status, isOpen, refetchStatus, onClose]);
 
+    // Reset state when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setUserTriggeredConnection(false);
+            setShowQR(false);
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const isConnected = instance?.status === "online";
-    const isConnecting = Boolean(instance?.connecting) || instance?.status === "connecting";
+    // Only consider "connecting" if user actually triggered a connection AND we have a QR
+    const isConnecting = userTriggeredConnection && (loading || Boolean(instance?.qrCode));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -68,7 +79,14 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
                     <div className="mb-6 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
                         <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Escaneie o QR code com seu celular</p>
                         <div className="w-48 h-48 mx-auto border-4 border-white dark:border-slate-700 rounded overflow-hidden">
-                            <Image src={instance.qrCode} alt="QR Code" width={192} height={192} unoptimized className="object-contain" />
+                            <Image
+                                src={instance.qrCode.startsWith('data:') ? instance.qrCode : `data:image/png;base64,${instance.qrCode}`}
+                                alt="QR Code"
+                                width={192}
+                                height={192}
+                                unoptimized
+                                className="object-contain"
+                            />
                         </div>
                         <button type="button" onClick={() => setShowQR(false)} className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Fechar QR Code</button>
                     </div>
@@ -76,7 +94,18 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
 
                 <div className="space-y-3 mb-6">
                     {!isConnected && !isConnecting && (
-                        <Button variant="primary" size="lg" className="w-full" isLoading={loading} onClick={async () => { await connect(); setShowQR(true); refetchStatus?.(); }}>
+                        <Button
+                            variant="primary"
+                            size="lg"
+                            className="w-full"
+                            isLoading={loading}
+                            onClick={async () => {
+                                setUserTriggeredConnection(true); // Mark that user initiated connection
+                                setShowQR(true); // Show QR immediately when button is clicked
+                                await connect();
+                                refetchStatus?.();
+                            }}
+                        >
                             <QrCode size={18} className="mr-2" />
                             Conectar (Gerar QR)
                         </Button>
@@ -84,12 +113,35 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
 
                     {(isConnected || isConnecting) && (
                         <>
-                            <Button variant="secondary" size="lg" className="w-full" isLoading={loading} onClick={async () => { await restart(); await refetch(); refetchStatus?.(); }}>
+                            <Button
+                                variant="secondary"
+                                size="lg"
+                                className="w-full"
+                                isLoading={loading}
+                                onClick={async () => {
+                                    setUserTriggeredConnection(true); // Also mark for restart
+                                    await restart();
+                                    await fetchStatus();
+                                    refetchStatus?.();
+                                }}
+                            >
                                 <RotateCcw size={18} className="mr-2" />
                                 Reiniciar Conexão
                             </Button>
 
-                            <Button variant="danger" size="lg" className="w-full" isLoading={loading} onClick={async () => { await disconnect(); await refetch(); refetchStatus?.(); }}>
+                            <Button
+                                variant="danger"
+                                size="lg"
+                                className="w-full"
+                                isLoading={loading}
+                                onClick={async () => {
+                                    setUserTriggeredConnection(false); // Reset connection state
+                                    setShowQR(false);
+                                    await disconnect();
+                                    await fetchStatus();
+                                    refetchStatus?.();
+                                }}
+                            >
                                 <Power size={18} className="mr-2" />
                                 Desconectar
                             </Button>

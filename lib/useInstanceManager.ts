@@ -1,230 +1,326 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+"use client";
 
-export interface InstanceData {
-  instancia: string | null;
-  status: string | null;
-  qrCode: string | null;
-  lastUpdate: string | null;
-  connecting: boolean;
+import { useCallback, useEffect, useRef, useState } from "react";
+import { notifyError, notifySuccess } from "./notify";
+
+type RawPayload = unknown;
+
+export type InstanceData = {
+  instancia?: string | null;
+  status?: "online" | "offline" | "connecting" | string | null;
+  qrCode?: string | null;
+  lastUpdate?: string | null;
+  connecting?: boolean | null;
+  _raw?: unknown;
+  [k: string]: unknown;
+};
+
+function stripMustache(v: unknown): string | null {
+  if (typeof v === "string") {
+    const cleaned = v.replace(/{{[^}]*}}/g, "").trim();
+    return cleaned.length > 0 ? cleaned : v.trim() || null;
+  }
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return null;
 }
 
-export function useInstanceManager() {
-  const [instance, setInstance] = useState<InstanceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function mapStatus(raw?: string | null | undefined): InstanceData["status"] {
+  if (!raw) return undefined;
+  const s = String(raw).toLowerCase();
+  if (s === "open") return "online";
+  if (s === "closed") return "offline";
+  if (s === "connecting") return "connecting";
+  if (s === "connected") return "online";
+  if (s === "disconnected") return "offline";
+  return s;
+}
 
-  const shortPollRef = useRef<number | null>(null);
-  const shortPollTimeoutRef = useRef<number | null>(null);
+function normalize(payload: RawPayload): InstanceData | undefined {
+  if (payload === undefined || payload === null) return undefined;
 
-  const normalize = useCallback((raw: unknown): InstanceData | null => {
-    if (!raw || typeof raw !== "object") return null;
-    const r = raw as Record<string, unknown>;
-    // considerar vários campos que o webhook pode retornar: connectionStatus, status, state, statusText
-    const statusRaw = (r.connectionStatus ??
-      r.status ??
-      r.state ??
-      r.statusText) as string | undefined | null;
-    let mappedStatus: string | null = null;
-    if (statusRaw !== undefined && statusRaw !== null) {
-      const s = String(statusRaw).toLowerCase();
-      if (s === "open" || s === "online" || s === "connected")
-        mappedStatus = "online";
-      else if (s === "closed" || s === "offline" || s === "disconnected")
-        mappedStatus = "offline";
-      else if (s === "connecting" || s === "pending")
-        mappedStatus = "connecting";
-      else mappedStatus = s;
+  let obj: unknown = Array.isArray(payload) ? payload[0] ?? payload : payload;
+
+  if (obj && typeof obj === "object") {
+    const maybe = obj as Record<string, unknown>;
+    if (Array.isArray(maybe.data)) {
+      obj = maybe.data[0] ?? maybe.data;
     }
+  }
 
-    return {
-      instancia: (r.instancia ?? r.name ?? null) as string | null,
-      status: (mappedStatus ?? null) as string | null,
-      qrCode: (r.qrCode ?? r.qr ?? r.qrcode ?? null) as string | null,
-      lastUpdate: (r.lastUpdate ?? r.updatedAt ?? null) as string | null,
-      connecting: !!r.connecting,
-    } as InstanceData;
-  }, []);
+  if (!obj || typeof obj !== "object") return undefined;
+  const o = obj as Record<string, unknown>;
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/instance/connect", { method: "GET" });
-      if (res.ok) {
-        const data = await res.json();
-        setInstance(normalize(data.data ?? null));
-        setError(null);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.error || "Erro ao buscar status");
-      }
-    } catch (err) {
-      console.error("Error fetching instance status:", err);
-      setError("Erro ao buscar status");
-    } finally {
-      setLoading(false);
-    }
-  }, [normalize]);
+  const possibleName =
+    o.instancia ?? o.name ?? o.instance ?? o.instanciaName ?? o.instanceName;
+  const possibleStatus =
+    o.status ??
+    o.connectionStatus ??
+    o.state ??
+    o.statusText ??
+    o.connectionstatus;
+  const possibleQr = o.qrCode ?? o.qrcode ?? o.qr ?? o.dataUrl ?? o.qr_data;
+  const lastUpdate = o.lastUpdate ?? o.updatedAt ?? o.updated_at ?? o.timestamp;
+  const connecting =
+    o.connecting ??
+    (typeof possibleStatus === "string"
+      ? String(possibleStatus).toLowerCase().includes("connect")
+      : undefined);
 
-  // polling curto que roda a cada `intervalMs` até timeoutMs ou até status === 'online'
-  const startShortPollingUntilOnline = useCallback(
-    (intervalMs = 2000, timeoutMs = 30000) => {
-      // limpar qualquer polling existente
-      if (shortPollRef.current) {
-        clearInterval(shortPollRef.current);
-        shortPollRef.current = null;
-      }
-      if (shortPollTimeoutRef.current) {
-        clearTimeout(shortPollTimeoutRef.current);
-        shortPollTimeoutRef.current = null;
-      }
+  const cleanName = stripMustache(possibleName);
+  const cleanQr = stripMustache(possibleQr);
 
-      const check = async () => {
-        try {
-          const res = await fetch("/api/instance/connect");
-          if (res.ok) {
-            const data = await res.json();
-            const normalized = normalize(data.data ?? null);
-            setInstance(normalized);
-            if (normalized?.status === "online") {
-              // já conectado -> parar polling
-              if (shortPollRef.current) {
-                clearInterval(shortPollRef.current);
-                shortPollRef.current = null;
-              }
-              if (shortPollTimeoutRef.current) {
-                clearTimeout(shortPollTimeoutRef.current);
-                shortPollTimeoutRef.current = null;
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error during short polling status:", err);
-        }
-      };
-
-      // primeira checagem imediata
-      check();
-
-      const id = window.setInterval(check, intervalMs);
-      shortPollRef.current = id as unknown as number;
-
-      const to = window.setTimeout(() => {
-        if (shortPollRef.current) {
-          clearInterval(shortPollRef.current);
-          shortPollRef.current = null;
-        }
-        shortPollTimeoutRef.current = null;
-      }, timeoutMs);
-      shortPollTimeoutRef.current = to as unknown as number;
-    },
-    [normalize]
+  const mappedStatus = mapStatus(
+    typeof possibleStatus === "string"
+      ? possibleStatus
+      : (stripMustache(possibleStatus) as string | null | undefined)
   );
 
-  const stopShortPolling = useCallback(() => {
-    if (shortPollRef.current) {
-      clearInterval(shortPollRef.current);
-      shortPollRef.current = null;
+  const normalized: InstanceData = {
+    instancia: cleanName ?? null,
+    status: mappedStatus ?? null,
+    qrCode: cleanQr ?? null,
+    lastUpdate: lastUpdate ? String(lastUpdate) : null,
+    connecting:
+      typeof connecting === "boolean"
+        ? connecting
+        : !!(mappedStatus === "connecting"),
+    _raw: payload,
+  };
+
+  return normalized;
+}
+
+export function useInstanceManager(opts?: {
+  shortPollInterval?: number;
+  shortPollTimeout?: number;
+}) {
+  const shortPollInterval = opts?.shortPollInterval ?? 2000; // 2s
+  const shortPollTimeout = opts?.shortPollTimeout ?? 30000; // 30s
+
+  const [data, setData] = useState<InstanceData | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mountedRef = useRef(true);
+  const shortPollTimer = useRef<number | null>(null);
+  const shortPollStopAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (shortPollTimer.current) {
+        window.clearInterval(shortPollTimer.current);
+        shortPollTimer.current = null;
+      }
+      shortPollStopAt.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stopShortPoll = useCallback(() => {
+    if (shortPollTimer.current) {
+      window.clearInterval(shortPollTimer.current);
+      shortPollTimer.current = null;
     }
-    if (shortPollTimeoutRef.current) {
-      clearTimeout(shortPollTimeoutRef.current);
-      shortPollTimeoutRef.current = null;
+    shortPollStopAt.current = null;
+  }, []);
+
+  const fetchStatus = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/instance/connect", {
+        method: "GET",
+        signal,
+      });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const json = (await res.json()) as unknown;
+      const j = json as Record<string, unknown>;
+      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const normalized = normalize(payload);
+      console.debug(
+        "[useInstanceManager] raw payload:",
+        json,
+        "normalized:",
+        normalized
+      );
+      if (!mountedRef.current) return normalized;
+      setData(normalized);
+      setLoading(false);
+      return normalized;
+    } catch (err: unknown) {
+      // Ignore AbortErrors (happens when component unmounts / effect aborts)
+      const name = (err as { name?: unknown })?.name as string | undefined;
+      if (name === "AbortError") {
+        console.debug("[useInstanceManager] fetchStatus aborted");
+        // do not set error for controlled aborts
+        if (mountedRef.current) setLoading(false);
+        return undefined;
+      }
+
+      if (!mountedRef.current) return undefined;
+      const message = err instanceof Error ? err.message : String(err);
+      console.debug("[useInstanceManager] fetchStatus error:", err);
+      setError(message);
+      setLoading(false);
+      return undefined;
     }
   }, []);
 
+  const startShortPollUntilOnline = useCallback(() => {
+    stopShortPoll();
+    shortPollStopAt.current = Date.now() + shortPollTimeout;
+
+    const attempt = async () => {
+      const current = await fetchStatus();
+      if (current?.status === "online") {
+        stopShortPoll();
+        if (typeof notifySuccess === "function")
+          notifySuccess("Instância conectada");
+      } else if (
+        shortPollStopAt.current &&
+        Date.now() >= shortPollStopAt.current
+      ) {
+        stopShortPoll();
+        if (typeof notifyError === "function")
+          notifyError("Timeout: não detectado estado online");
+      }
+    };
+
+    void attempt();
+    shortPollTimer.current = window.setInterval(() => {
+      void attempt();
+    }, shortPollInterval) as unknown as number;
+  }, [fetchStatus, shortPollInterval, shortPollTimeout, stopShortPoll]);
+
   const connect = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const res = await fetch("/api/instance/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "connect" }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setInstance(normalize(data.data ?? null));
-        setError(null);
-        // forçar refetch imediato para garantir atualização
-        await fetchStatus();
-        // iniciar polling curto até ficar online
-        startShortPollingUntilOnline(2000, 30000);
-      } else {
-        setError(data.error || "Erro ao conectar");
-      }
-    } catch (err) {
-      console.error("Error connecting:", err);
-      setError("Erro de conexão");
-    } finally {
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const json = (await res.json()) as unknown;
+      const j = json as Record<string, unknown>;
+      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const normalized = normalize(payload);
+      console.debug(
+        "[useInstanceManager] connect response:",
+        json,
+        "normalized:",
+        normalized
+      );
+      if (mountedRef.current)
+        setData((prev) => ({ ...(prev ?? {}), ...(normalized ?? {}) }));
+
+      startShortPollUntilOnline();
+
+      if (typeof notifySuccess === "function")
+        notifySuccess("QR gerado, aguardando conexão");
       setLoading(false);
+      return normalized;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.debug("[useInstanceManager] connect error:", err);
+      if (mountedRef.current) setError(message);
+      if (typeof notifyError === "function")
+        notifyError("Falha ao iniciar conexão");
+      setLoading(false);
+      return undefined;
     }
-  }, [normalize, fetchStatus, startShortPollingUntilOnline]);
+  }, [startShortPollUntilOnline]);
 
   const restart = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch("/api/instance/restart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setInstance(normalize(data.data ?? null));
-        // refetch para obter estado atualizado
-        await fetchStatus();
-      } else {
-        setError(data.error || "Erro ao reiniciar");
-      }
-    } catch (err) {
-      console.error("Error restarting:", err);
-      setError("Erro ao reiniciar");
-    } finally {
+      const res = await fetch("/api/instance/restart", { method: "POST" });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const json = (await res.json()) as unknown;
+      const j = json as Record<string, unknown>;
+      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const normalized = normalize(payload);
+      console.debug(
+        "[useInstanceManager] restart response:",
+        json,
+        "normalized:",
+        normalized
+      );
+      if (mountedRef.current)
+        setData((prev) => ({ ...(prev ?? {}), ...(normalized ?? {}) }));
+
+      startShortPollUntilOnline();
+
+      if (typeof notifySuccess === "function")
+        notifySuccess("Reinício solicitado");
       setLoading(false);
+      return normalized;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.debug("[useInstanceManager] restart error:", err);
+      if (mountedRef.current) setError(message);
+      if (typeof notifyError === "function")
+        notifyError("Falha ao reiniciar instância");
+      setLoading(false);
+      return undefined;
     }
-  }, [normalize, fetchStatus]);
+  }, [startShortPollUntilOnline]);
 
   const disconnect = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const res = await fetch("/api/instance/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "disconnect" }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setInstance(normalize(data.data ?? null));
-        // refetch para garantir estado
-        await fetchStatus();
-      } else {
-        setError(data.error || "Erro ao desconectar");
-      }
-    } catch (err) {
-      console.error("Error disconnecting:", err);
-      setError("Erro ao desconectar");
-    } finally {
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const json = (await res.json()) as unknown;
+      const j = json as Record<string, unknown>;
+      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const normalized = normalize(payload);
+      console.debug(
+        "[useInstanceManager] disconnect response:",
+        json,
+        "normalized:",
+        normalized
+      );
+      stopShortPoll();
+      if (mountedRef.current) setData(normalized ?? undefined);
+      if (typeof notifySuccess === "function")
+        notifySuccess("Instância desconectada");
       setLoading(false);
+      return normalized;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.debug("[useInstanceManager] disconnect error:", err);
+      if (mountedRef.current) setError(message);
+      if (typeof notifyError === "function")
+        notifyError("Falha ao desconectar instância");
+      setLoading(false);
+      return undefined;
     }
-  }, [normalize, fetchStatus]);
+  }, [stopShortPoll]);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = window.setInterval(fetchStatus, 5000);
-    return () => {
-      clearInterval(interval);
-      stopShortPolling();
-    };
-  }, [fetchStatus, stopShortPolling]);
+    const ac = new AbortController();
+    void fetchStatus(ac.signal);
+    return () => ac.abort();
+  }, [fetchStatus]);
 
   return {
-    instance,
+    data,
     loading,
     error,
+    fetchStatus,
     connect,
     restart,
     disconnect,
-    refetch: fetchStatus,
-    // helpers para testes
-    _stopShortPolling: stopShortPolling,
-  };
+    stopShortPoll,
+  } as const;
 }

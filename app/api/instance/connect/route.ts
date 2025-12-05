@@ -152,13 +152,69 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const action = (body?.action ?? "connect") as string;
+
+    if (action === "disconnect") {
+      const DISCONNECT_WEBHOOK =
+        process.env.N8N_DISCONNECT_WEBHOOK ||
+        "https://n8n.ronnysenna.com.br/webhook/desconectarinstancia";
+
+      console.log(`🔌 Chamando webhook de desconexão: ${DISCONNECT_WEBHOOK}`);
+
+      // opcional: enviar nome da instância para o webhook
+      const payload = { instancia: instanceData.instancia };
+
+      const resp = await fetch(DISCONNECT_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const contentType = resp.headers.get("content-type") ?? "";
+      let parsedResponse: unknown = {};
+      if (contentType.includes("application/json")) {
+        parsedResponse = await resp.json().catch(() => ({}));
+      } else {
+        const text = await resp.text().catch(() => "");
+        try {
+          parsedResponse = JSON.parse(text);
+        } catch {
+          parsedResponse = { message: text };
+        }
+      }
+
+      // Atualizar cache local para refletir desconexão
+      instanceData.status = "offline";
+      instanceData.connecting = false;
+      instanceData.lastUpdate = new Date().toISOString();
+
+      // Retornar resposta normalizada para frontend (mesmo formato do GET)
+      return NextResponse.json({
+        success: true,
+        message: "Instância desconectada",
+        data: {
+          instancia: instanceData.instancia,
+          status: instanceData.status,
+          qrCode: instanceData.qrCode,
+          lastUpdate: instanceData.lastUpdate,
+          connecting: instanceData.connecting,
+          // incluir qualquer payload adicional retornado pelo webhook para debug
+          webhookResponse: parsedResponse,
+        },
+      });
+    }
+
+    // fallback: comportamento de conectar (existing implementation)
     const webhookUrl =
+      process.env.N8N_CONNECT_WEBHOOK ||
       "https://n8n.ronnysenna.com.br/webhook/conectarinstancia";
 
     console.log(`🔗 Chamando webhook de conexão: ${webhookUrl}`);
 
     instanceData.connecting = true;
-    instanceData.lastUpdate = new Date();
+    instanceData.lastUpdate = new Date().toISOString();
 
     const response = await fetch(webhookUrl, {
       method: "POST",
@@ -181,9 +237,9 @@ export async function POST(request: NextRequest) {
     console.log(`📦 Content-Type: ${contentType}`);
 
     let qrCodeData: string | null = null;
-    let responseData: any = {};
+    let responseData: Record<string, unknown> = {};
 
-    if (contentType && contentType.includes("image")) {
+    if (contentType?.includes("image")) {
       // Se for uma imagem, converter para base64
       console.log("📸 Webhook retornou imagem!");
       const buffer = await response.arrayBuffer();
@@ -191,9 +247,9 @@ export async function POST(request: NextRequest) {
 
       // Determinar o tipo de imagem
       let mimeType = "image/png";
-      if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+      if (contentType?.includes("jpeg") || contentType?.includes("jpg")) {
         mimeType = "image/jpeg";
-      } else if (contentType.includes("svg")) {
+      } else if (contentType?.includes("svg")) {
         mimeType = "image/svg+xml";
       }
 
@@ -201,13 +257,13 @@ export async function POST(request: NextRequest) {
       responseData = {
         qrCode: qrCodeData,
         instancia: "evolution",
-      };
-    } else if (contentType && contentType.includes("json")) {
+      } as Record<string, unknown>;
+    } else if (contentType?.includes("json")) {
       // Se for JSON, parsear normalmente
       console.log("📋 Webhook retornou JSON!");
-      responseData = await response.json();
-      qrCodeData = responseData.qrCode || null;
-    } else if (contentType && contentType.includes("text")) {
+      responseData = (await response.json()) as Record<string, unknown>;
+      qrCodeData = (responseData.qrCode as string) || null;
+    } else if (contentType?.includes("text")) {
       // Se for texto/SVG, usar como data URL
       console.log("📝 Webhook retornou texto!");
       const text = await response.text();
@@ -218,14 +274,14 @@ export async function POST(request: NextRequest) {
       } else {
         qrCodeData = text;
       }
-      responseData = { qrCode: qrCodeData };
+      responseData = { qrCode: qrCodeData } as Record<string, unknown>;
     } else {
       // Por padrão, assumir que é um blob/imagem
       console.log("🖼️ Webhook retornou blob!");
       const buffer = await response.arrayBuffer();
       const base64 = Buffer.from(buffer).toString("base64");
       qrCodeData = `data:image/png;base64,${base64}`;
-      responseData = { qrCode: qrCodeData };
+      responseData = { qrCode: qrCodeData } as Record<string, unknown>;
     }
 
     // Armazenar no cache
@@ -233,7 +289,7 @@ export async function POST(request: NextRequest) {
       instanceData.qrCode = qrCodeData;
     }
     if (responseData.instancia) {
-      instanceData.instancia = responseData.instancia;
+      instanceData.instancia = String(responseData.instancia);
     }
 
     console.log(`✅ QR Code obtido com sucesso`);
@@ -243,7 +299,7 @@ export async function POST(request: NextRequest) {
       message: "QR code gerado. Escaneie para conectar.",
       data: {
         qrCode: qrCodeData,
-        instancia: responseData.instancia || "evolution",
+        instancia: (responseData.instancia as string) || "evolution",
         ...responseData,
       },
     });
