@@ -1,13 +1,26 @@
 "use client";
 
-import { BarChart3, Send, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { BarChart3, Send, Users, ArrowRight, Wifi, Server } from "lucide-react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Button from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import DashboardMetrics from "./metrics";
+import { useInstanceManager } from "@/lib/useInstanceManager";
 
 export default function DashboardPage() {
+  const { data: instance, loading: instanceLoading, error: instanceError } = useInstanceManager();
+
+  const getInstanceStatus = () => {
+    if (instanceLoading) return { text: "Verificando...", color: "yellow", icon: "⟳" };
+    if (instanceError) return { text: "Erro", color: "red", icon: "✗" };
+    if (instance?.status === "online") return { text: "Conectada", color: "green", icon: "✓" };
+    if (instance?.status === "connecting") return { text: "Conectando...", color: "yellow", icon: "⟳" };
+    return { text: "Desconectada", color: "red", icon: "✗" };
+  };
+
+  const instanceStatus = getInstanceStatus();
+
   return (
     <ProtectedRoute>
       <main className="flex-1 min-h-screen">
@@ -105,26 +118,66 @@ export default function DashboardPage() {
                     Confirme sempre antes de enviar para muitos contatos
                   </p>
                 </div>
+                <div className="flex gap-3">
+                  <span className="text-indigo-600 font-bold">4.</span>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Mantenha o WhatsApp conectado para envios automáticos
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-indigo-600 font-bold">5.</span>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Importe contatos via CSV/XLSX para economizar tempo
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader
-                title="📊 Sobre"
-                description="Sistema de Envio em Massa"
+                title="📊 Status do Sistema"
+                description="Monitoramento em tempo real"
               />
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
+                {/* Status do Sistema */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-muted)]">Versão</span>
-                  <span className="font-semibold text-[var(--text)]">1.0.0</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-muted)]">Status</span>
+                  <div className="flex items-center gap-2">
+                    <Server size={16} className="text-blue-600" />
+                    <span className="text-sm text-[var(--text-muted)]">Sistema</span>
+                  </div>
                   <span className="badge badge-success gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     Online
                   </span>
                 </div>
+
+                {/* Status da Instância WhatsApp */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wifi size={16} className="text-green-600" />
+                    <span className="text-sm text-[var(--text-muted)]">WhatsApp</span>
+                  </div>
+                  <span className={`badge gap-2 ${instanceStatus.color === 'green'
+                      ? 'badge-success'
+                      : instanceStatus.color === 'yellow'
+                        ? 'badge-warning'
+                        : 'badge-danger'
+                    }`}>
+                    <div className={`w-2 h-2 rounded-full ${instanceStatus.color === 'green'
+                        ? 'bg-green-500 animate-pulse'
+                        : instanceStatus.color === 'yellow'
+                          ? 'bg-yellow-500 animate-pulse'
+                          : 'bg-red-500'
+                      }`} />
+                    {instanceStatus.text}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--text-muted)]">Versão</span>
+                  <span className="font-semibold text-[var(--text)]">1.0.0</span>
+                </div>
+
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
                   <span className="text-sm text-[var(--text-muted)]">Suporte</span>
                   <Button

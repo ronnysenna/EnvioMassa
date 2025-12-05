@@ -218,6 +218,9 @@ export default function EnviarPage() {
 
   const selectGalleryImage = (url: string) => {
     setImageUrl(url);
+    // Limpar preview quando selecionar da galeria
+    setImagePreview(null);
+    setImageFile(null);
     try {
       localStorage.setItem("selectedImageUrl", url);
     } catch { }
@@ -698,30 +701,19 @@ export default function EnviarPage() {
                   <span>Abrir galeria</span>
                 </button>
 
-                {imageUrl && (
-                  <div className="relative rounded overflow-hidden border w-24 h-24 sm:w-28 sm:h-28 bg-white p-1 flex items-center justify-center">
-                    <img
-                      src={imageUrl}
-                      alt="Imagem selecionada"
-                      className="w-full h-full object-contain"
-                      onError={handleImageLoadError(imageUrl)}
-                    />
-                  </div>
-                )}
-
-                {imagePreview && (
+                {/* Mostrar apenas uma imagem: preview tem prioridade sobre imageUrl */}
+                {(imagePreview || imageUrl) && (
                   <div className="flex items-center gap-3">
                     <div className="relative rounded overflow-hidden border w-24 h-24 sm:w-28 sm:h-28 bg-white p-1 flex items-center justify-center">
                       <img
-                        src={imagePreview}
-                        alt="Preview"
+                        src={imagePreview || imageUrl || ""}
+                        alt={imagePreview ? "Preview da imagem" : "Imagem selecionada"}
                         className="w-full h-full object-contain"
-                        onError={(e) => {
+                        onError={imagePreview ? (e) => {
                           try {
-                            (e.currentTarget as HTMLImageElement).src =
-                              "/file.svg";
+                            (e.currentTarget as HTMLImageElement).src = "/file.svg";
                           } catch { }
-                        }}
+                        } : handleImageLoadError(imageUrl)}
                       />
                     </div>
                     <button

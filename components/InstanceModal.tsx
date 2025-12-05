@@ -43,6 +43,23 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
         }
     }, [isOpen]);
 
+    // Close modal on ESC key press
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const isConnected = instance?.status === "online";
@@ -50,14 +67,28 @@ export default function InstanceModal({ isOpen, onClose, refetchStatus }: Instan
     const isConnecting = userTriggeredConnection && (loading || Boolean(instance?.qrCode));
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={(e) => {
+                // Only close if clicking on the backdrop, not the modal content
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 dark:bg-slate-900">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <Wifi size={24} className="text-indigo-600" />
                         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Conectar Instância</h2>
                     </div>
-                    <button type="button" onClick={onClose} className="p-1 hover:bg-slate-100 rounded dark:hover:bg-slate-800 transition-colors">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md dark:hover:bg-slate-800 dark:hover:text-gray-300 transition-colors"
+                        title="Fechar modal"
+                        aria-label="Fechar modal"
+                    >
                         <X size={20} />
                     </button>
                 </div>
