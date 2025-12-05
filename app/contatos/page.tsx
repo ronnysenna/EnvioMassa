@@ -335,36 +335,40 @@ export default function ContatosPage() {
 
           {/* Add manual contact */}
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow card-border mb-6">
-            <div className="text-sm font-medium text-gray-800 mb-2">
+            <div className="text-sm font-medium text-gray-800 mb-3">
               Adicionar contato manualmente
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input
-                id="manual-name"
-                placeholder="Nome"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
-                className="col-span-2 px-3 py-2 border rounded"
-              />
-              <input
-                id="manual-phone"
-                placeholder="Telefone"
-                value={manualPhone}
-                onChange={handleManualPhoneChange}
-                className="px-3 py-2 border rounded"
-              />
+            <div className="space-y-3">
+              {/* Primeira linha: Nome e Telefone */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  id="manual-name"
+                  placeholder="Nome completo"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <input
+                  id="manual-phone"
+                  placeholder="(85) 99999-9999"
+                  value={manualPhone}
+                  onChange={handleManualPhoneChange}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              {/* Segunda linha: E-mail */}
+              <div>
+                <input
+                  id="manual-email"
+                  type="email"
+                  placeholder="E-mail (opcional)"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
-            <div className="mt-3">
-              <input
-                id="manual-email"
-                type="email"
-                placeholder="E-mail (opcional)"
-                value={manualEmail}
-                onChange={(e) => setManualEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded"
-              />
-            </div>
-            <div className="mt-1">
+            <div className="mt-2">
               <div className="text-xs text-gray-500">
                 Formato: (DD) 9XXXX-XXXX — válido com 10 ou 11 dígitos
               </div>
@@ -374,24 +378,24 @@ export default function ContatosPage() {
                 </div>
               )}
             </div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <button
                 id="manual-add"
-                className="px-4 py-2 bg-blue-600 text-white rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 type="button"
                 onClick={handleAddManual}
-                disabled={!manualPhoneValid}
-                aria-disabled={!manualPhoneValid}
+                disabled={!manualPhoneValid || !manualName.trim()}
+                aria-disabled={!manualPhoneValid || !manualName.trim()}
               >
-                Adicionar
+                Adicionar Contato
               </button>
               <button
                 id="manual-clear"
-                className="px-4 py-2 border rounded"
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium"
                 type="button"
                 onClick={handleClearManual}
               >
-                Limpar
+                Limpar Campos
               </button>
             </div>
           </div>
@@ -400,144 +404,169 @@ export default function ContatosPage() {
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow card-border mb-6">
             <input
               type="search"
-              placeholder="Buscar por nome ou telefone"
+              placeholder="Buscar por nome, telefone ou email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Table */}
-          {/* Controle de limite por página (mantido no topo) */}
-          <div className="flex items-center p-4 gap-4">
+          {/* Controle de limite por página */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-3 bg-white rounded-t-lg border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Mostrar por página:</label>
+              <label htmlFor="perPage-select" className="text-sm text-gray-600 whitespace-nowrap">Mostrar:</label>
               <select
+                id="perPage-select"
                 value={perPage}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   setPerPage(v);
                   setPage(1);
                 }}
-                className="px-2 py-1 border rounded"
+                className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={25}>25</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
+              <span className="text-sm text-gray-600 whitespace-nowrap">por página</span>
+            </div>
+            <div className="text-sm text-gray-600">
+              {total === 0
+                ? "0 contatos"
+                : `${(page - 1) * perPage + 1} - ${Math.min(
+                  total,
+                  page * perPage,
+                )} de ${total} contatos`}
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-auto">
-            <table className="min-w-full table-auto">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
-                    Nome
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
-                    Telefone
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
+          <div className="bg-white rounded-b-lg shadow-md border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={4} className="p-4 text-sm text-gray-600">
-                      Carregando...
-                    </td>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      Nome
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      Telefone
+                    </th>
+                    <th className="hidden md:table-cell px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      Email
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      Ações
+                    </th>
                   </tr>
-                ) : contacts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-4 text-sm text-gray-600">
-                      Nenhum contato encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  contacts.map((c, i) => (
-                    <tr
-                      key={`${c.id ?? c.telefone ?? i}`}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {c.nome}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {c.telefone}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {c.email}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="p-4 text-sm text-gray-600 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditClick(c)}
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                            title="Editar contato"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteContact(c)}
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                            title="Deletar contato"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          Carregando...
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : contacts.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-sm text-gray-600 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="text-gray-400">📭</div>
+                          <div>Nenhum contato encontrado</div>
+                          {search && (
+                            <div className="text-xs text-gray-500">
+                              Tente uma busca diferente ou adicione um novo contato
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    contacts.map((c, i) => (
+                      <tr
+                        key={`${c.id ?? c.telefone ?? i}`}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-3 sm:px-4 py-3 text-sm text-gray-900">
+                          <div className="font-medium">{c.nome}</div>
+                          <div className="md:hidden text-xs text-gray-500 mt-1">{c.email}</div>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 text-sm text-gray-700 font-mono">
+                          {c.telefone}
+                        </td>
+                        <td className="hidden md:table-cell px-3 sm:px-4 py-3 text-sm text-gray-700">
+                          {c.email}
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEditClick(c)}
+                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Editar contato"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteContact(c)}
+                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                              title="Deletar contato"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Footer de paginação - abaixo da tabela */}
-          <div className="flex items-center justify-between p-4 gap-4 mt-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => {
-                  const np = Math.max(1, page - 1);
-                  console.debug("navigate previous", { from: page, to: np, perPage });
-                  setPage(np);
-                }}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Anterior
-              </button>
+          {/* Footer de paginação */}
+          <div className="bg-white rounded-b-lg border-t border-gray-200 p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => {
+                    const np = Math.max(1, page - 1);
+                    console.debug("navigate previous", { from: page, to: np, perPage });
+                    setPage(np);
+                  }}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  ← Anterior
+                </button>
 
-              <div className="text-sm text-gray-700">
-                {total === 0
-                  ? "0 contatos"
-                  : `${(page - 1) * perPage + 1} - ${Math.min(
-                    total,
-                    page * perPage,
-                  )} de ${total}`}
+                <div className="px-3 py-1.5 text-sm text-gray-700 bg-gray-50 rounded-md font-medium">
+                  Página {page}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={page * perPage >= total || loading}
+                  onClick={() => {
+                    const np = page + 1;
+                    console.debug("navigate next", { from: page, to: np, perPage });
+                    setPage(np);
+                  }}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Próxima →
+                </button>
               </div>
 
-              <button
-                type="button"
-                disabled={page * perPage >= total || loading}
-                onClick={() => {
-                  const np = page + 1;
-                  console.debug("navigate next", { from: page, to: np, perPage });
-                  setPage(np);
-                }}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Próxima
-              </button>
+              <div className="text-sm text-gray-600">
+                {Math.ceil(total / perPage)} página{Math.ceil(total / perPage) !== 1 ? 's' : ''} no total
+              </div>
             </div>
           </div>
         </div>
