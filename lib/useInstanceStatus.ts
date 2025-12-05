@@ -1,74 +1,105 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface InstanceStatus {
-  instancia?: string;
-  status: "open" | "closed" | "offline" | "error" | string;
-  lastUpdate?: Date | null;
-  message?: string;
+export interface InstanceData {
+  instancia: string | null;
+  status: string | null;
+  qrCode: string | null;
+  lastUpdate: string | null;
+  connecting: boolean;
 }
 
-export function useInstanceStatus() {
-  const [status, setStatus] = useState<InstanceStatus | null>(null);
+export function useInstanceStatus(pollMs = 5000) {
+  const mountedRef = useRef(true);
+  const [data, setData] = useState<InstanceData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    let interval: NodeJS.Timeout;
+  const normalize = useCallback((raw: unknown): InstanceData | null => {
+    if (raw == null) return null;
+    let candidate: unknown = raw;
+    if (Array.isArray(candidate) && candidate.length) candidate = candidate[0];
+    if (candidate && typeof candidate === "object") {
+      const c = candidate as Record<string, unknown>;
+      if (Array.isArray(c.data) && c.data.length) candidate = c.data[0];
+    }
+    if (!candidate || typeof candidate !== "object") return null;
+    const r = candidate as Record<string, unknown>;
 
-    const checkInstanceStatus = async () => {
-      try {
-        // Buscar status do endpoint local /api/instance/webhook
-        const res = await fetch("/api/instance/webhook", {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
+    const statusRaw = (r.connectionStatus ??
+      r.status ??
+      r.state ??
+      r.statusText ??
+      r.connectionstatus) as string | undefined | null;
 
-        if (!mounted) return;
+    let mappedStatus: string | null = null;
+    if (statusRaw !== undefined && statusRaw !== null) {
+      const cleaned = String(statusRaw)
+        .replace(/{{\s*|\s*}}/g, "")
+        .trim()
+        .toLowerCase();
+      if (cleaned === "open" || cleaned === "online" || cleaned === "connected")
+        mappedStatus = "online";
+      else if (
+        cleaned === "closed" ||
+        cleaned === "offline" ||
+        cleaned === "disconnected"
+      )
+        mappedStatus = "offline";
+      else if (cleaned === "connecting" || cleaned === "pending")
+        mappedStatus = "connecting";
+      else mappedStatus = cleaned;
+    }
 
-        if (res.ok) {
-          const data = await res.json();
-          const instanceData = data.data;
-
-          // Converter "open" → "online", "closed" → "offline"
-          const normalizedStatus = {
-            ...instanceData,
-            status:
-              instanceData.status === "open"
-                ? "online"
-                : instanceData.status === "closed"
-                ? "offline"
-                : instanceData.status,
-          };
-
-          setStatus(normalizedStatus);
-        } else {
-          setStatus({
-            status: "offline",
-            message: "Instância não respondeu",
-          });
-        }
-      } catch (error) {
-        if (!mounted) return;
-        console.error("Error checking instance status:", error);
-        setStatus({
-          status: "offline",
-          message: "Erro ao conectar",
-        });
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    checkInstanceStatus();
-
-    // Verificar status a cada 30 segundos
-    interval = setInterval(checkInstanceStatus, 30000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    return {
+      instancia: (r.instancia ?? r.name ?? null) as string | null,
+      status: mappedStatus,
+      qrCode: (r.qrCode ?? r.qr ?? r.qrcode ?? null) as string | null,
+      lastUpdate: (r.lastUpdate ?? r.updatedAt ?? null) as string | null,
+      connecting: !!r.connecting,
+    } as InstanceData;
   }, []);
 
-  return { status, loading };
+  const fetchStatus = useCallback(async () => {
+    if (!mountedRef.current) return null;
+    if (mountedRef.current) setLoading(true);
+    try {
+      const res = await fetch("/api/instance/webhook", { method: "GET" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (mountedRef.current) setError(err?.error ?? "Erro ao buscar status");
+        return null;
+      }
+      const json = await res.json().catch(() => ({}));
+      // debug logs
+      // eslint-disable-next-line no-console
+      console.debug("[useInstanceStatus] raw:", json);
+      const normalized = normalize(json?.data ?? json ?? null);
+      if (mountedRef.current) {
+        setData(normalized);
+        setError(null);
+        // eslint-disable-next-line no-console
+        console.debug("[useInstanceStatus] normalized:", normalized);
+      }
+      return normalized;
+    } catch (err) {
+      if (mountedRef.current) setError("Erro ao buscar status");
+      // eslint-disable-next-line no-console
+      console.error("useInstanceStatus fetch error", err);
+      return null;
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [normalize]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    fetchStatus();
+    const id = window.setInterval(fetchStatus, pollMs);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(id);
+    };
+  }, [fetchStatus, pollMs]);
+
+  return { data, loading, error, refetch: fetchStatus };
 }

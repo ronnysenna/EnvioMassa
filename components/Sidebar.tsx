@@ -10,10 +10,13 @@ import {
   Users,
   X,
   AlertCircle,
+  Wifi,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useInstanceStatus } from "@/lib/useInstanceStatus";
+import dynamic from "next/dynamic";
+const InstanceModal = dynamic(() => import("@/components/InstanceModal").then((mod) => mod.default), { ssr: false });
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -21,8 +24,6 @@ const menuItems = [
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/grupos", label: "Grupos", icon: Tags },
   { href: "/imagem", label: "Upload de Imagem", icon: ImageIcon },
-  // Nota: a página de upload de imagem foi removida do menu. Uploads agora são feitos
-  // diretamente na página Enviar Mensagem. A rota de API /api/images permanece ativa.
 ];
 
 export default function Sidebar({
@@ -33,8 +34,9 @@ export default function Sidebar({
   onClose?: () => void;
 } = {}) {
   const pathname = usePathname();
-  const { status, loading } = useInstanceStatus();
+  const { data: status, refetch: statusRefetch, loading: statusLoading, error: statusError } = useInstanceStatus();
   const [mounted, setMounted] = useState(false);
+  const [instanceModalOpen, setInstanceModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -42,7 +44,6 @@ export default function Sidebar({
 
   const handleLogout = async () => {
     try {
-      // Call logout API to clear the JWT cookie
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
@@ -50,15 +51,13 @@ export default function Sidebar({
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Force redirect to login regardless of API call result
       window.location.replace("/login");
       onClose?.();
     }
   };
 
   const sidebarContent = (
-    <div className="w-64 h-full relative flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-r border-indigo-900/30 shadow-2xl">
-      {/* Close button (visible only on mobile overlays) */}
+    <div className="w-64 h-full relative flex flex-col bg-linear-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-r border-indigo-900/30 shadow-2xl">
       <button
         type="button"
         aria-label="Fechar menu"
@@ -68,10 +67,9 @@ export default function Sidebar({
         <X size={20} />
       </button>
 
-      {/* Header/Logo */}
-      <div className="p-6 border-b border-indigo-900/20 bg-gradient-to-r from-indigo-600/10 to-cyan-600/10">
+      <div className="p-6 border-b border-indigo-900/20 bg-linear-to-r from-indigo-600/10 to-cyan-600/10">
         <div className="flex items-center gap-3 mb-3">
-          <div className="bg-gradient-to-br from-indigo-500 to-cyan-500 p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+          <div className="bg-linear-to-br from-indigo-500 to-cyan-500 p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
             <Send size={22} className="text-white" />
           </div>
           <div className="flex-1">
@@ -100,24 +98,19 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Status warning if offline */}
         {mounted && status && status.status !== "online" && (
           <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-700/30 rounded-lg flex items-center gap-2">
-            <AlertCircle size={14} className="text-yellow-400 flex-shrink-0" />
-            <span className="text-xs text-yellow-300">
-              Instância desconectada
-            </span>
+            <AlertCircle size={14} className="text-yellow-400 shrink-0" />
+            <span className="text-xs text-yellow-300">Instância desconectada</span>
           </div>
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-6 px-3 overflow-y-auto space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
 
-          // Cores diferentes por ícone
           const iconColors: Record<string, string> = {
             "/dashboard": "group-hover:text-blue-400 text-blue-300",
             "/enviar": "group-hover:text-indigo-400 text-indigo-300",
@@ -132,7 +125,7 @@ export default function Sidebar({
               href={item.href}
               onClick={() => onClose?.()}
               className={`group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 relative ${isActive
-                ? "bg-gradient-to-r from-indigo-600/40 to-cyan-600/40 text-white shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
+                ? "bg-linear-to-r from-indigo-600/40 to-cyan-600/40 text-white shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
                 : "text-slate-300 hover:bg-slate-800/50 hover:text-white"
                 }`}
             >
@@ -141,7 +134,7 @@ export default function Sidebar({
               {isActive && (
                 <>
                   <div className="ml-auto w-2 h-2 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50" />
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-indigo-500 to-cyan-500 rounded-r" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-linear-to-b from-indigo-500 to-cyan-500 rounded-r" />
                 </>
               )}
             </Link>
@@ -149,8 +142,16 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Footer/Logout */}
-      <div className="p-4 border-t border-indigo-900/20 mt-auto bg-gradient-to-r from-slate-800/30 to-slate-900/30">
+      <div className="p-4 border-t border-indigo-900/20 mt-auto bg-linear-to-r from-slate-800/30 to-slate-900/30 space-y-2">
+        <button
+          type="button"
+          onClick={() => setInstanceModalOpen(true)}
+          className="flex items-center gap-3 w-full px-4 py-3 text-slate-300 hover:bg-cyan-600/20 hover:text-cyan-300 rounded-lg transition-all duration-200 group"
+        >
+          <Wifi size={20} className="group-hover:text-cyan-400" />
+          <span className="text-sm font-medium">Conectar Instância</span>
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -167,24 +168,19 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar (hidden on small screens) */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen">
-        {sidebarContent}
-      </aside>
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen">{sidebarContent}</aside>
 
-      {/* Mobile overlay sidebar */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={onClose ?? undefined}
-            aria-hidden="true"
-          />
+          <div className="absolute inset-0 bg-black/50" onClick={onClose ?? undefined} aria-hidden="true" />
           <div className="relative">
             <div className="h-screen">{sidebarContent}</div>
           </div>
         </div>
       )}
+
+      {/* Instance Modal */}
+      <InstanceModal isOpen={instanceModalOpen} onClose={() => setInstanceModalOpen(false)} refetchStatus={statusRefetch} />
     </>
   );
 }
