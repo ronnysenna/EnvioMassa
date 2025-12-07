@@ -16,31 +16,74 @@ export function exportToExcel(contacts: Contact[], filename = "contatos.xlsx") {
 
 export function importFromCSV(file: File): Promise<Contact[]> {
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      header: true,
-      complete: (results) => {
-        // Normaliza as chaves para minúsculas e aceita 'contato' ou 'telefone'
-        const contacts = (results.data as unknown[])
-          .map((row) => {
-            if (typeof row !== "object" || row === null)
-              return { nome: "", telefone: "" };
-            const keys = Object.keys(row).reduce(
-              (acc, key) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
+        const firstLine = text.split(/\r?\n/)[0] || "";
+        // detectar delimitador: preferir ponto-e-vírgula quando presente
+        const delimiter =
+          firstLine.includes(";") && !firstLine.includes(",") ? ";" : ",";
+
+        // primeiro tentativa: header=true (colunas nome/telefone/contato)
+        const parsed = Papa.parse<Record<string, string>>(text, {
+          header: true,
+          delimiter,
+          skipEmptyLines: true,
+        });
+
+        const hasUsefulHeader = (parsed.meta.fields || []).some((f) => {
+          const k = (f || "").toLowerCase();
+          return (
+            k === "nome" || k === "telefone" || k === "contato" || k === "email"
+          );
+        });
+
+        let contacts: Contact[] = [];
+
+        if (hasUsefulHeader) {
+          contacts = (parsed.data as unknown[])
+            .map((row) => {
+              if (typeof row !== "object" || row === null)
+                return { nome: "", telefone: "" };
+              const keys = Object.keys(row).reduce((acc, key) => {
                 acc[key.toLowerCase()] = (row as Record<string, string>)[key];
                 return acc;
-              },
-              {} as Record<string, string>,
-            );
-            return {
-              nome: keys.nome || "",
-              telefone: keys.contato || keys.telefone || "",
-            };
+              }, {} as Record<string, string>);
+              return {
+                nome: keys.nome || "",
+                telefone: keys.contato || keys.telefone || "",
+              } as Contact;
+            })
+            .filter((r) => r.nome && r.telefone);
+
+          resolve(contacts);
+          return;
+        }
+
+        // se não encontrou cabeçalho útil, tentar parse como CSV sem cabeçalho
+        const parsedNoHeader = Papa.parse<string[]>(text, {
+          header: false,
+          delimiter,
+          skipEmptyLines: true,
+        });
+
+        contacts = (parsedNoHeader.data as unknown[])
+          .map((row) => {
+            if (!Array.isArray(row)) return { nome: "", telefone: "" };
+            const nome = (row[0] || "").toString().trim();
+            const telefone = (row[1] || "").toString().trim();
+            return { nome, telefone } as Contact;
           })
-          .filter((row) => row.nome && row.telefone);
+          .filter((r) => r.nome && r.telefone);
+
         resolve(contacts);
-      },
-      error: (error) => reject(error),
-    });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error("Erro ao ler arquivo CSV"));
+    reader.readAsText(file, "utf-8");
   });
 }
 
@@ -58,13 +101,10 @@ export function importFromExcel(file: File): Promise<Contact[]> {
           .map((row) => {
             if (typeof row !== "object" || row === null)
               return { nome: "", telefone: "" };
-            const keys = Object.keys(row).reduce(
-              (acc, key) => {
-                acc[key.toLowerCase()] = (row as Record<string, string>)[key];
-                return acc;
-              },
-              {} as Record<string, string>,
-            );
+            const keys = Object.keys(row).reduce((acc, key) => {
+              acc[key.toLowerCase()] = (row as Record<string, string>)[key];
+              return acc;
+            }, {} as Record<string, string>);
             return {
               nome: keys.nome || "",
               telefone: keys.contato || keys.telefone || "",

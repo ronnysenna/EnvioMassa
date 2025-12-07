@@ -34,7 +34,6 @@ export default function EditContactModal({
 }: EditContactModalProps) {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [email, setEmail] = useState("");
   const [isValid, setIsValid] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +58,6 @@ export default function EditContactModal({
     if (contact) {
       setNome(contact.nome || "");
       setTelefone(formatBRPhone(contact.telefone || ""));
-      setEmail(contact.email || "");
 
       const digits = normalizePhone(contact.telefone || "");
       const phoneValid = digits.length === 10 || digits.length === 11;
@@ -67,7 +65,6 @@ export default function EditContactModal({
     } else {
       setNome("");
       setTelefone("");
-      setEmail("");
       setIsValid(false);
     }
   }, [contact]);
@@ -81,7 +78,6 @@ export default function EditContactModal({
         ...contact,
         nome: nome.trim(),
         telefone: normalizePhone(telefone),
-        email: email.trim() || undefined,
       };
 
       await onSave(updatedContact);
@@ -156,24 +152,6 @@ export default function EditContactModal({
             <p className="text-xs text-gray-500 mt-1">
               Formato: (DD) 9XXXX-XXXX — válido com 10 ou 11 dígitos
             </p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="edit-email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="edit-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@exemplo.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            />
           </div>
         </div>
 

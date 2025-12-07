@@ -23,7 +23,6 @@ model Contact {
     id        Int            @id @default(autoincrement())
     nome      String
     telefone  String         @unique
-    email     String?
     userId    Int
     user      User           @relation(fields: [userId], references: [id])
     createdAt DateTime       @default(now())

@@ -18,6 +18,10 @@ import { sendMessage } from "@/lib/webhook";
 export default function EnviarPage() {
   const toast = useToast();
   const [message, setMessage] = useState("");
+  // mensagens-padrão (até 5) persistidas localmente
+  const [templates, setTemplates] = useState<string[]>([]);
+  const [editingTemplateIndex, setEditingTemplateIndex] = useState<number | null>(null);
+  const [templateDraft, setTemplateDraft] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -148,6 +152,80 @@ export default function EnviarPage() {
       if (url) setImageUrl(url);
     } catch { }
   }, []);
+
+  // carregar templates do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("messageTemplates");
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed)) setTemplates(parsed.slice(0, 5));
+      }
+    } catch { }
+  }, []);
+
+  const saveTemplates = (next: string[]) => {
+    const t = next.slice(0, 5);
+    setTemplates(t);
+    try {
+      localStorage.setItem("messageTemplates", JSON.stringify(t));
+    } catch { }
+  };
+
+  const handleAddNewTemplate = () => {
+    if (templates.length >= 3) {
+      toast.showToast({ type: "error", message: "Limite de 3 mensagens-padrão atingido." });
+      return;
+    }
+    setEditingTemplateIndex(templates.length);
+    setTemplateDraft("");
+  };
+
+  const handleEditTemplate = (idx: number) => {
+    setEditingTemplateIndex(idx);
+    setTemplateDraft(templates[idx] ?? "");
+  };
+
+  const handleCancelEditTemplate = () => {
+    setEditingTemplateIndex(null);
+    setTemplateDraft("");
+  };
+
+  const handleSaveTemplate = () => {
+    const val = templateDraft.trim();
+    if (!val) {
+      toast.showToast({ type: "error", message: "Template vazio." });
+      return;
+    }
+    const next = [...templates];
+    if (editingTemplateIndex == null) {
+      if (next.length >= 5) {
+        toast.showToast({ type: "error", message: "Limite de 5 mensagens-padrão atingido." });
+        return;
+      }
+      next.push(val);
+    } else if (editingTemplateIndex >= 0 && editingTemplateIndex < 5) {
+      if (editingTemplateIndex < next.length) next[editingTemplateIndex] = val;
+      else next.push(val);
+    }
+    saveTemplates(next);
+    setEditingTemplateIndex(null);
+    setTemplateDraft("");
+    toast.showToast({ type: "success", message: "Template salvo." });
+  };
+
+  const handleDeleteTemplate = (idx: number) => {
+    const next = templates.filter((_, i) => i !== idx);
+    saveTemplates(next);
+    toast.showToast({ type: "success", message: "Template removido." });
+  };
+
+  const handleApplyTemplate = (idx: number) => {
+    const t = templates[idx];
+    if (!t) return;
+    setMessage(t);
+    toast.showToast({ type: "success", message: "Template aplicado à mensagem." });
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -421,6 +499,53 @@ export default function EnviarPage() {
               >
                 Mensagem
               </label>
+              {/* Mensagens-padrão */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium text-gray-700">Mensagens Padrão</div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleAddNewTemplate}
+                      className="text-sm text-blue-600"
+                    >
+                      Adicionar (máx 3)
+                    </button>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  {templates.length === 0 && (
+                    <div className="text-xs text-gray-500">Nenhum template salvo.</div>
+                  )}
+                  {templates.map((t, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <div className="flex-1 text-sm text-gray-800 break-words">{t}</div>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => handleApplyTemplate(idx)} className="text-sm text-green-600">Usar</button>
+                        <button type="button" onClick={() => handleEditTemplate(idx)} className="text-sm text-blue-600">Editar</button>
+                        <button type="button" onClick={() => handleDeleteTemplate(idx)} className="text-sm text-red-600">Remover</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* editor inline para novo/edição */}
+                  {editingTemplateIndex !== null && (
+                    <div className="mt-2">
+                      <textarea
+                        rows={3}
+                        value={templateDraft}
+                        onChange={(e) => setTemplateDraft(e.target.value)}
+                        className="w-full px-3 py-2 border rounded resize-vertical focus:ring-2 focus:ring-blue-500 outline-none text-gray-900"
+                        placeholder="Digite o texto do template..."
+                      />
+                      <div className="mt-2 flex items-center gap-2">
+                        <button type="button" onClick={handleSaveTemplate} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Salvar</button>
+                        <button type="button" onClick={handleCancelEditTemplate} className="px-3 py-1 border rounded text-sm">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
               <textarea
                 id="message"
                 value={message}

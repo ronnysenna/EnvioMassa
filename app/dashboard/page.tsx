@@ -20,6 +20,7 @@ export default function DashboardPage() {
   };
 
   const instanceStatus = getInstanceStatus();
+  const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0';
 
   return (
     <ProtectedRoute>
@@ -158,16 +159,16 @@ export default function DashboardPage() {
                     <span className="text-sm text-[var(--text-muted)]">WhatsApp</span>
                   </div>
                   <span className={`badge gap-2 ${instanceStatus.color === 'green'
-                      ? 'badge-success'
-                      : instanceStatus.color === 'yellow'
-                        ? 'badge-warning'
-                        : 'badge-danger'
+                    ? 'badge-success'
+                    : instanceStatus.color === 'yellow'
+                      ? 'badge-warning'
+                      : 'badge-danger'
                     }`}>
                     <div className={`w-2 h-2 rounded-full ${instanceStatus.color === 'green'
-                        ? 'bg-green-500 animate-pulse'
-                        : instanceStatus.color === 'yellow'
-                          ? 'bg-yellow-500 animate-pulse'
-                          : 'bg-red-500'
+                      ? 'bg-green-500 animate-pulse'
+                      : instanceStatus.color === 'yellow'
+                        ? 'bg-yellow-500 animate-pulse'
+                        : 'bg-red-500'
                       }`} />
                     {instanceStatus.text}
                   </span>
@@ -175,7 +176,14 @@ export default function DashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--text-muted)]">Versão</span>
-                  <span className="font-semibold text-[var(--text)]">1.0.0</span>
+                  <span className="font-semibold text-[var(--text)]">
+                    {APP_VERSION}
+                    {APP_VERSION === '1.0.0' && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        fallback
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">

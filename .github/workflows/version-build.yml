@@ -1,0 +1,43 @@
+name: Build (set NEXT_PUBLIC_APP_VERSION)
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Determine app version
+        id: set_version
+        run: |
+          # prefer a tag, fallback to short commit
+          V=$(git describe --tags --always --dirty)
+          echo "NEXT_PUBLIC_APP_VERSION=$V" >> $GITHUB_ENV
+          echo "version=$V" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_APP_VERSION: ${{ env.NEXT_PUBLIC_APP_VERSION }}
+        run: npm run build
+
+      - name: Upload build artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next

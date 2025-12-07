@@ -8,7 +8,6 @@ interface Contact {
   id: number;
   nome: string;
   telefone: string;
-  email?: string;
 }
 
 interface Group {
@@ -226,7 +225,6 @@ export default function ManageContactsModal({
                       </div>
                       <div className="text-xs text-gray-500">
                         {contact.telefone}
-                        {contact.email && ` • ${contact.email}`}
                       </div>
                     </div>
                   </label>

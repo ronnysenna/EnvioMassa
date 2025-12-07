@@ -6,6 +6,7 @@ import EditContactModal from "@/components/EditContactModal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useToast } from "@/components/ToastProvider";
 import { importFromCSV, importFromExcel } from "@/lib/fileUtils";
+import ConfirmModal from "@/components/ConfirmModal";
 import type { Contact } from "@/lib/webhook";
 
 export default function ContatosPage() {
@@ -16,11 +17,14 @@ export default function ContatosPage() {
   // estados para adicionar contato manualmente
   const [manualName, setManualName] = useState("");
   const [manualPhone, setManualPhone] = useState("");
-  const [manualEmail, setManualEmail] = useState("");
   const [manualPhoneValid, setManualPhoneValid] = useState<boolean>(false);
   // Estados para modal de edição
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // seleção de contatos para exclusão em massa
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkOpen, setIsConfirmBulkOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   // paginação
   const [page, setPage] = useState<number>(1);
   const [perPage, setPerPage] = useState<number>(25);
@@ -86,6 +90,8 @@ export default function ContatosPage() {
         const data = await res.json();
         // atualiza apenas os dados — não forçar alteração do estado de página/limit
         setContacts(data.contacts || []);
+        // limpar seleção ao carregar nova lista
+        setSelectedIds([]);
         setTotal(Number(data.total ?? 0));
       } catch (err) {
         console.error("fetchContacts error", err);
@@ -174,7 +180,6 @@ export default function ContatosPage() {
   const handleAddManual = async () => {
     const nome = manualName.trim();
     const telefone = normalizePhone(manualPhone.trim());
-    const email = manualEmail.trim() || undefined;
     if (!telefone) {
       showToast({ type: "error", message: "Telefone é obrigatório." });
       return;
@@ -188,7 +193,7 @@ export default function ContatosPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ nome, telefone, email }),
+        body: JSON.stringify({ nome, telefone }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -201,7 +206,6 @@ export default function ContatosPage() {
       showToast({ type: "success", message: "Contato adicionado." });
       setManualName("");
       setManualPhone("");
-      setManualEmail("");
       fetchContacts("", page, perPage);
     } catch (err) {
       console.error("add manual contact", err);
@@ -212,7 +216,6 @@ export default function ContatosPage() {
   const handleClearManual = () => {
     setManualName("");
     setManualPhone("");
-    setManualEmail("");
   };
 
   // Função para abrir modal de edição
@@ -237,7 +240,6 @@ export default function ContatosPage() {
         body: JSON.stringify({
           nome: updatedContact.nome,
           telefone: updatedContact.telefone,
-          email: updatedContact.email,
         }),
       });
 
@@ -288,6 +290,53 @@ export default function ContatosPage() {
     }
   };
 
+  // seleção helpers
+  const toggleSelect = (id?: number) => {
+    if (typeof id !== 'number') return;
+    setSelectedIds((prev) => {
+      const has = prev.includes(id);
+      if (has) return prev.filter((x) => x !== id);
+      return [...prev, id];
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (contacts.length === 0) return;
+    if (selectedIds.length === contacts.length) {
+      setSelectedIds([]);
+    } else {
+      // usar apenas contatos com id definido
+      const ids = contacts.map((c) => (typeof c.id === 'number' ? c.id : -1)).filter((i) => i !== -1);
+      setSelectedIds(ids);
+    }
+  };
+
+  const handleConfirmDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch('/api/contacts/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast({ type: 'error', message: data.error || 'Falha ao excluir contatos.' });
+      } else {
+        showToast({ type: 'success', message: `${data.deleted ?? 0} contatos excluídos.` });
+      }
+    } catch (err) {
+      console.error('bulk delete', err);
+      showToast({ type: 'error', message: 'Erro ao excluir contatos.' });
+    } finally {
+      setBulkLoading(false);
+      setIsConfirmBulkOpen(false);
+      fetchContacts('', page, perPage);
+    }
+  };
+
   // sincroniza refs quando estados mudam
   useEffect(() => {
     pageRef.current = page;
@@ -310,7 +359,7 @@ export default function ContatosPage() {
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-3">
-              O arquivo deve conter colunas como nome, telefone e email.
+              O arquivo deve conter colunas como nome e telefone (email não é obrigatório).
             </p>
 
             <label
@@ -356,17 +405,7 @@ export default function ContatosPage() {
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              {/* Segunda linha: E-mail */}
-              <div>
-                <input
-                  id="manual-email"
-                  type="email"
-                  placeholder="E-mail (opcional)"
-                  value={manualEmail}
-                  onChange={(e) => setManualEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              {/* email removed */}
             </div>
             <div className="mt-2">
               <div className="text-xs text-gray-500">
@@ -404,7 +443,7 @@ export default function ContatosPage() {
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow card-border mb-6">
             <input
               type="search"
-              placeholder="Buscar por nome, telefone ou email..."
+              placeholder="Buscar por nome ou telefone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -412,6 +451,28 @@ export default function ContatosPage() {
           </div>
 
           {/* Table */}
+          {/* Toolbar: seleção e exclusão em massa */}
+          <div className="flex items-center gap-3 mb-2">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={contacts.length > 0 && selectedIds.length === contacts.length}
+                onChange={toggleSelectAll}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-700">Selecionar todos</span>
+            </label>
+
+            <button
+              type="button"
+              disabled={selectedIds.length === 0 || loading}
+              onClick={() => setIsConfirmBulkOpen(true)}
+              className="px-3 py-1 text-sm rounded bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Excluir selecionados ({selectedIds.length})
+            </button>
+          </div>
+
           {/* Controle de limite por página */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-3 bg-white rounded-t-lg border-b border-gray-200">
             <div className="flex items-center gap-2">
@@ -453,9 +514,6 @@ export default function ContatosPage() {
                     <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                       Telefone
                     </th>
-                    <th className="hidden md:table-cell px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
-                      Email
-                    </th>
                     <th className="px-3 sm:px-4 py-3 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                       Ações
                     </th>
@@ -492,15 +550,21 @@ export default function ContatosPage() {
                         className="hover:bg-gray-50 transition-colors"
                       >
                         <td className="px-3 sm:px-4 py-3 text-sm text-gray-900">
+                          <div className="hidden md:block mb-1">
+                            <input
+                              type="checkbox"
+                              checked={typeof c.id === 'number' ? selectedIds.includes(c.id) : false}
+                              onChange={() => toggleSelect(c.id)}
+                              className="w-4 h-4"
+                            />
+                          </div>
                           <div className="font-medium">{c.nome}</div>
-                          <div className="md:hidden text-xs text-gray-500 mt-1">{c.email}</div>
+                          <div className="md:hidden text-xs text-gray-500 mt-1">{c.telefone}</div>
                         </td>
                         <td className="px-3 sm:px-4 py-3 text-sm text-gray-700 font-mono">
                           {c.telefone}
                         </td>
-                        <td className="hidden md:table-cell px-3 sm:px-4 py-3 text-sm text-gray-700">
-                          {c.email}
-                        </td>
+                        {/* email removed */}
                         <td className="px-3 sm:px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
@@ -578,6 +642,17 @@ export default function ContatosPage() {
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         onSave={handleSaveContact}
+      />
+
+      {/* Confirmação para exclusão em massa */}
+      <ConfirmModal
+        open={isConfirmBulkOpen}
+        title={`Excluir ${selectedIds.length} contatos?`}
+        description={`Esta ação irá excluir definitivamente ${selectedIds.length} contato(s). Deseja continuar?`}
+        confirmLabel="Excluir selecionados"
+        loading={bulkLoading}
+        onCancel={() => setIsConfirmBulkOpen(false)}
+        onConfirm={handleConfirmDeleteSelected}
       />
     </ProtectedRoute>
   );

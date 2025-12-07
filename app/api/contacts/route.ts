@@ -18,12 +18,11 @@ export async function GET(req: Request) {
 
     const where: Record<string, unknown> = { userId };
     if (search) {
-      // busca por nome, telefone ou email parcialmente
+      // busca por nome ou telefone parcialmente
       Object.assign(where, {
         OR: [
           { nome: { contains: search, mode: "insensitive" } },
           { telefone: { contains: search } },
-          { email: { contains: search, mode: "insensitive" } },
         ],
       });
     }
@@ -53,7 +52,6 @@ export async function POST(req: Request) {
     const nome = (body.nome || "").toString();
     const telefoneRaw = (body.telefone || "").toString();
     const telefone = telefoneRaw.replace(/\D/g, "");
-    const email = body.email ? body.email.toString().trim() : null;
 
     if (!telefone) {
       return NextResponse.json({ error: "Telefone inválido" }, { status: 400 });
@@ -62,16 +60,16 @@ export async function POST(req: Request) {
     // verificar contato existente pelo telefone
     const existing = await prisma.contact.findUnique({ where: { telefone } });
     if (existing) {
-      // atualizar nome, email e reassociar ao usuário atual
+      // atualizar nome e reassociar ao usuário atual
       const updated = await prisma.contact.update({
         where: { id: existing.id },
-        data: { nome, email, userId },
+        data: { nome, userId },
       });
       return NextResponse.json({ contact: updated });
     }
 
     const created = await prisma.contact.create({
-      data: { nome, telefone, email, userId },
+      data: { nome, telefone, userId },
     });
 
     return NextResponse.json({ contact: created });
