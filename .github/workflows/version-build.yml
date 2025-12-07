@@ -1,4 +1,4 @@
-name: Build (set NEXT_PUBLIC_APP_VERSION)
+name: Build
 
 on:
   push:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necessário para obter git history completo
 
       - name: Use Node.js
         uses: actions/setup-node@v4
@@ -23,14 +25,6 @@ jobs:
         run: |
           rm -rf .next node_modules
 
-      - name: Determine app version
-        id: set_version
-        run: |
-          # prefer a tag, fallback to short commit
-          V=$(git describe --tags --always --dirty)
-          echo "NEXT_PUBLIC_APP_VERSION=$V" >> $GITHUB_ENV
-          echo "version=$V" >> $GITHUB_OUTPUT
-
       - name: Install dependencies
         run: npm ci
 
@@ -39,9 +33,12 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx prisma generate
 
+      - name: Generate version automatically
+        run: node scripts/generate-version.js
+
       - name: Build
         env:
-          NEXT_PUBLIC_APP_VERSION: ${{ env.NEXT_PUBLIC_APP_VERSION }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run build
 
       - name: Upload build artifact (optional)
@@ -49,4 +46,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-build
+          path: .next/
+
           path: .next

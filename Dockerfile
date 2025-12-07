@@ -15,15 +15,6 @@ ARG NEXT_PUBLIC_BASE_URL
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 ARG NEXT_PUBLIC_CONFIRM_THRESHOLD
 ENV NEXT_PUBLIC_CONFIRM_THRESHOLD=${NEXT_PUBLIC_CONFIRM_THRESHOLD}
-# Extract version from package.json; can be overridden via build-arg
-ARG NEXT_PUBLIC_APP_VERSION
-RUN if [ -z "$NEXT_PUBLIC_APP_VERSION" ]; then \
-    BASE_VERSION=$(node -p "require('./package.json').version"); \
-    COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev"); \
-    NEXT_PUBLIC_APP_VERSION="${BASE_VERSION}-${COMMIT_SHA}"; \
-    fi && \
-    echo "Building with version: $NEXT_PUBLIC_APP_VERSION"
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # copy package files and install deps
 COPY package.json package-lock.json* ./
@@ -31,11 +22,13 @@ RUN npm ci --prefer-offline --no-audit --progress=false || npm install
 
 # copy source
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY . .
 
-# generate prisma client and build
-RUN npx prisma generate
-RUN npm run build
+# Generate version automatically and generate prisma client
+RUN node scripts/generate-version.js && \
+    npx prisma generate && \
+    npm run build
 
 # Runner stage
 FROM node:20-bullseye-slim AS runner
