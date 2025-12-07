@@ -8,15 +8,16 @@ generator client {
 }
 
 model User {
-    id        Int        @id @default(autoincrement())
-    username  String     @unique
+    id        Int               @id @default(autoincrement())
+    username  String            @unique
     password  String
-    role      String     @default("user")
-    createdAt DateTime   @default(now())
+    role      String            @default("user")
+    createdAt DateTime          @default(now())
     contacts  Contact[]
     images    Image[]
     groups    Group[]
     selection Selection?
+    templates MessageTemplate[]
 }
 
 model Contact {
@@ -69,4 +70,16 @@ model Selection {
     userId      Int      @unique
     selectedIds Json
     updatedAt   DateTime @updatedAt
+}
+
+model MessageTemplate {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name      String
+    content   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([userId, name])
 }
