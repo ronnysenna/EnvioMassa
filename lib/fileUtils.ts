@@ -34,9 +34,7 @@ export function importFromCSV(file: File): Promise<Contact[]> {
 
         const hasUsefulHeader = (parsed.meta.fields || []).some((f) => {
           const k = (f || "").toLowerCase();
-          return (
-            k === "nome" || k === "telefone" || k === "contato" || k === "email"
-          );
+          return k === "nome" || k === "telefone" || k === "contato";
         });
 
         let contacts: Contact[] = [];
