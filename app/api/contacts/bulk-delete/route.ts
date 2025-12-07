@@ -13,7 +13,7 @@ export async function DELETE(req: Request) {
     const rawIds = Array.isArray(body.ids) ? body.ids : [];
     const ids: number[] = rawIds
       .map((v: unknown) => Number(v))
-      .filter((n) => Number.isInteger(n));
+      .filter((n: number) => Number.isInteger(n));
 
     if (ids.length === 0) {
       return NextResponse.json(
