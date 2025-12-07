@@ -3,8 +3,10 @@
   "version": "1.0.1",
   "private": true,
   "scripts": {
-    "dev": "node scripts/generate-version.js && next dev",
-    "build": "node scripts/generate-version.js && next build",
+    "prebuild": "node scripts/generate-version.js",
+    "predev": "node scripts/generate-version.js",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write"
