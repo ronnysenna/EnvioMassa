@@ -18,8 +18,11 @@ ENV NEXT_PUBLIC_CONFIRM_THRESHOLD=${NEXT_PUBLIC_CONFIRM_THRESHOLD}
 # Extract version from package.json; can be overridden via build-arg
 ARG NEXT_PUBLIC_APP_VERSION
 RUN if [ -z "$NEXT_PUBLIC_APP_VERSION" ]; then \
-    NEXT_PUBLIC_APP_VERSION=$(node -p "require('./package.json').version"); \
-    fi
+    BASE_VERSION=$(node -p "require('./package.json').version"); \
+    COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev"); \
+    NEXT_PUBLIC_APP_VERSION="${BASE_VERSION}-${COMMIT_SHA}"; \
+    fi && \
+    echo "Building with version: $NEXT_PUBLIC_APP_VERSION"
 ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # copy package files and install deps
@@ -41,7 +44,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 # Inherit version from build stage (already embedded in .next)
-ARG NEXT_PUBLIC_APP_VERSION=1.0.1
+ARG NEXT_PUBLIC_APP_VERSION=1.0.1-dev
 ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # install only production deps
