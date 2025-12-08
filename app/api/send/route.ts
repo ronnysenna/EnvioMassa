@@ -117,18 +117,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Log para debug (remover em produção se necessário)
-    console.log("[WEBHOOK DEBUG]", {
-      imagemPath,
-      imagemUrlCompleta,
-      baseUrl:
-        imagemUrlCompleta !== "sem-imagem"
-          ? imagemUrlCompleta.split("/api/uploads/")[0]
-          : "N/A",
-      messageLength: message.length,
-      contactsCount: Array.isArray(contacts) ? contacts.length : 0,
-    });
-
     try {
       const response = await axios.post(webhookUrl, payload, {
         timeout: 30000,

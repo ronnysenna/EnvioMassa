@@ -46,7 +46,7 @@ export default function Sidebar({
         credentials: "include",
       });
     } catch (error) {
-      console.error("Logout error:", error);
+      // Logout error - continue to login page
     } finally {
       window.location.replace("/login");
       onClose?.();

@@ -34,18 +34,12 @@ export async function GET(
 
     // DEBUG: logs temporários para diagnosticar 404 em runtime remoto (n8n)
     try {
-      console.log("[uploads GET] decodedFilename=", decodedFilename);
-      console.log("[uploads GET] process.cwd()=", process.cwd());
-      console.log("[uploads GET] possiblePaths=");
-      for (const p of possiblePaths) {
-        try {
-          console.log("  -", p, "exists=", fs.existsSync(p));
-        } catch (e) {
-          console.log("  -", p, "exists=? (err)", String(e));
-        }
+      // Debug logging disabled in production
+      if (process.env.NODE_ENV === "development") {
+        // Console logging for development only
       }
     } catch (debugErr) {
-      console.warn("[uploads GET] debug logging failed", debugErr);
+      // Debug error silently
     }
 
     // Verificações de existência (para retorno no modo debug)

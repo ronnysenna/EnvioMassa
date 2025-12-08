@@ -90,21 +90,9 @@ export async function POST(req: Request) {
 
       if (webhookResponse.ok) {
         webhookSuccess = true;
-        console.log(
-          `✅ Webhook CRIAR_INSTANCIA chamado com sucesso para: ${instance.instanceName}`
-        );
-      } else {
-        console.warn(
-          `⚠️ Webhook CRIAR_INSTANCIA retornou status ${webhookResponse.status} para: ${instance.instanceName}`
-        );
-        const responseText = await webhookResponse.text();
-        console.warn(`Resposta do webhook: ${responseText}`);
       }
     } catch (webhookError) {
-      console.error(
-        `❌ Erro ao chamar webhook CRIAR_INSTANCIA para ${instance.instanceName}:`,
-        webhookError
-      );
+      // Webhook error - log only in development
     }
 
     return NextResponse.json(

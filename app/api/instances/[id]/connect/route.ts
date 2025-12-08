@@ -64,40 +64,17 @@ export async function POST(
             const buffer = await res.arrayBuffer();
             const base64 = Buffer.from(buffer).toString("base64");
             qrCodeData = `data:${contentType};base64,${base64}`;
-            console.log(
-              "📸 QR Code recebido como imagem binária, tamanho:",
-              base64.length
-            );
           } else {
             // Se for JSON
             const data = await res.json();
-            console.log(
-              "📋 Resposta JSON do webhook (completa):",
-              JSON.stringify(data, null, 2)
-            );
-            console.log("📋 Chaves presentes:", Object.keys(data));
             qrCodeData = data?.qrCode;
-            console.log("📋 qrCodeData extraído?", !!qrCodeData);
-            if (qrCodeData) {
-              console.log(
-                "✅ QR Code JSON extraído, tamanho:",
-                qrCodeData.length
-              );
-              console.log(
-                "✅ Primeiros 150 chars:",
-                qrCodeData.substring(0, 150)
-              );
-            } else {
-              console.warn("⚠️ qrCode está vazio ou indefinido. Data=", data);
+            if (!qrCodeData) {
+              // Tentar extrair de estruturas alternativas
             }
           }
 
           // Atualizar QR code se recebido
           if (qrCodeData) {
-            console.log(
-              "✅ QR Code salvo no BD, primeiros 100 chars:",
-              qrCodeData.substring(0, 100)
-            );
             const withQr = await prisma.instance.update({
               where: { id: instanceId },
               data: { qrCode: qrCodeData },
@@ -127,7 +104,7 @@ export async function POST(
           }),
         });
       } catch (err) {
-        console.error("Erro ao chamar webhook de desconexão:", err);
+        // Webhook error - continue with disconnect
       }
 
       const updated = await prisma.instance.update({

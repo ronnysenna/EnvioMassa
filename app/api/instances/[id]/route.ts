@@ -121,20 +121,15 @@ export async function DELETE(_req: Request, context: NextContextWithParams) {
           userId: userId,
         }),
       });
-      console.log(
-        `🗑️  Webhook de deleção chamado para: ${instance.instanceName}`
-      );
+      // Webhook delete called
     } catch (webhookErr) {
-      console.error("Erro ao chamar webhook de deleção:", webhookErr);
-      // Continuar com deleção mesmo se webhook falhar
+      // Webhook error - continue with deletion
     }
 
     // Deletar instância do BD
     await prisma.instance.delete({
       where: { id: instanceId },
     });
-
-    console.log(`✅ Instância ${instance.instanceName} deletada do BD`);
 
     return NextResponse.json({ message: "Instância deletada com sucesso" });
   } catch (err) {

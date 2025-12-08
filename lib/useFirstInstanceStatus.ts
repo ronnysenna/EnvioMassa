@@ -24,14 +24,14 @@ export function useFirstInstanceStatus() {
           }
         }
       } catch (err) {
-        console.error("Erro ao buscar instância:", err);
+        // Error fetching instances - continue silently
       } finally {
         setLoading(false);
       }
     };
 
     fetchInstance();
-    
+
     // Atualizar a cada 10 segundos
     const interval = setInterval(fetchInstance, 10000);
     return () => clearInterval(interval);

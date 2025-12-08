@@ -42,10 +42,6 @@ export async function POST(
     try {
       const verifyWebhookUrl = getWebhookUrl("VERIFICAR_INSTANCIA");
 
-      console.log(
-        `📤 Enviando para webhook: instanceName="${nameToCheck}", userId=${userId}`
-      );
-
       const res = await fetch(verifyWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,11 +54,8 @@ export async function POST(
       if (res.ok) {
         let data = await res.json();
 
-        console.log(`📥 Resposta bruta do webhook:`, data);
-
         // Se a resposta for um array (pode acontecer com N8N), pegar o primeiro elemento
         if (Array.isArray(data) && data.length > 0) {
-          console.log(`⚠️  Webhook retornou array, usando primeiro elemento`);
           data = data[0];
         }
 
@@ -72,11 +65,6 @@ export async function POST(
           data?.connected === "true" ||
           data?.status === "online" ||
           data?.status === "open";
-
-        console.log(
-          `🔍 Verificação de ${nameToCheck}: conectado=${isConnected}, resposta=`,
-          data
-        );
 
         // Se conectado, atualizar status no BD
         if (isConnected) {
@@ -95,7 +83,6 @@ export async function POST(
           instance,
         });
       } else {
-        console.warn(`⚠️ Webhook de verificação retornou status ${res.status}`);
         return NextResponse.json(
           {
             connected: false,
@@ -106,7 +93,6 @@ export async function POST(
         );
       }
     } catch (webhookError) {
-      console.error("Erro ao chamar webhook de verificação:", webhookError);
       return NextResponse.json(
         {
           connected: false,

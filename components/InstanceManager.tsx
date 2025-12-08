@@ -99,14 +99,11 @@ export default function InstanceManager() {
 
             if (res.ok) {
                 const data = await res.json();
-                console.log("🔍 Verificação retornou:", data);
                 const isConnected = data.connected === true || data.instance?.status === "online";
-                console.log("✅ Instância conectada?", isConnected);
                 return isConnected;
             }
             return false;
-        } catch (err) {
-            console.error("❌ Erro ao verificar:", err);
+        } catch {
             return false;
         }
     };
@@ -139,24 +136,19 @@ export default function InstanceManager() {
                 const maxAttempts = 60; // 5 minutos (5s * 60)
                 const pollInterval = setInterval(async () => {
                     attemps++;
-                    console.log(`🔄 Verificação #${attemps}...`);
                     const connected = await verifyInstanceConnected(instanceId);
-                    console.log(`📊 Resultado verificação #${attemps}: ${connected}`);
 
                     if (connected) {
-                        console.log("🎉 Instância detectada como conectada! Fechando modal...");
                         clearInterval(pollInterval);
                         setShowQrModal(false);
                         // Atualizar instância
                         const updatedRes = await fetch(`/api/instances/${instanceId}`);
                         if (updatedRes.ok) {
                             const { instance } = await updatedRes.json();
-                            console.log("✅ Instância atualizada:", instance);
                             setInstances(instances.map(i => i.id === instanceId ? instance : i));
                         }
                         toast.showToast({ type: "success", message: "✅ Instância conectada com sucesso!" });
                     } else if (attemps >= maxAttempts) {
-                        console.warn("⏱️ Timeout na verificação após", attemps, "tentativas");
                         clearInterval(pollInterval);
                         toast.showToast({ type: "warning", message: "⏱️ Timeout na verificação. Feche o modal e tente novamente." });
                     }
