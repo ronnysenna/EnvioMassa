@@ -62,10 +62,30 @@ export async function POST(req: Request) {
       imagemUrlCompleta = `${baseUrl}${imagemPath}`;
     }
 
+    // Buscar primeira instância conectada do usuário
+    const instance = await prisma.instance.findFirst({
+      where: {
+        userId: user.id,
+        status: "online",
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (!instance) {
+      return NextResponse.json(
+        {
+          error:
+            "Nenhuma instância WhatsApp conectada. Conecte uma instância primeiro.",
+        },
+        { status: 400 }
+      );
+    }
+
     const payload: Record<string, unknown> = {
       message,
       imagemUrl: imagemUrlCompleta,
       userId: user.id,
+      instanceName: instance.instanceName,
     };
 
     // Se groupIds foram fornecidos, buscar contatos desses grupos (garantindo pertencimento ao usuário)
