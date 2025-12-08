@@ -1,26 +1,16 @@
 "use client";
 
-import { BarChart3, Send, Users, ArrowRight, Wifi, Server } from "lucide-react";
+import { BarChart3, Send, Users, ArrowRight, Server, Wifi } from "lucide-react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Button from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import DashboardMetrics from "./metrics";
-import { useInstanceManager } from "@/lib/useInstanceManager";
+import { useFirstInstanceStatus } from "@/lib/useFirstInstanceStatus";
 
 export default function DashboardPage() {
-  const { data: instance, loading: instanceLoading, error: instanceError } = useInstanceManager();
-
-  const getInstanceStatus = () => {
-    if (instanceLoading) return { text: "Verificando...", color: "yellow", icon: "⟳" };
-    if (instanceError) return { text: "Erro", color: "red", icon: "✗" };
-    if (instance?.status === "online") return { text: "Conectada", color: "green", icon: "✓" };
-    if (instance?.status === "connecting") return { text: "Conectando...", color: "yellow", icon: "⟳" };
-    return { text: "Desconectada", color: "red", icon: "✗" };
-  };
-
-  const instanceStatus = getInstanceStatus();
-  const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0';
+  const { instance, loading } = useFirstInstanceStatus();
+  const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
 
   return (
     <ProtectedRoute>
@@ -152,37 +142,22 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                {/* Status da Instância WhatsApp */}
+                {/* Status WhatsApp */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Wifi size={16} className="text-green-600" />
+                    <Wifi size={16} className={instance?.status === "online" ? "text-green-600" : "text-red-600"} />
                     <span className="text-sm text-[var(--text-muted)]">WhatsApp</span>
                   </div>
-                  <span className={`badge gap-2 ${instanceStatus.color === 'green'
-                    ? 'badge-success'
-                    : instanceStatus.color === 'yellow'
-                      ? 'badge-warning'
-                      : 'badge-danger'
-                    }`}>
-                    <div className={`w-2 h-2 rounded-full ${instanceStatus.color === 'green'
-                      ? 'bg-green-500 animate-pulse'
-                      : instanceStatus.color === 'yellow'
-                        ? 'bg-yellow-500 animate-pulse'
-                        : 'bg-red-500'
-                      }`} />
-                    {instanceStatus.text}
+                  <span className={loading ? "text-[var(--text-muted)]" : instance?.status === "online" ? "badge badge-success" : "badge badge-error"}>
+                    {loading ? "Verificando..." : instance?.status === "online" ? "Conectado" : "Desconectado"}
                   </span>
                 </div>
 
+                {/* Versão Dinâmica */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--text-muted)]">Versão</span>
-                  <span className="font-semibold text-[var(--text)]">
+                  <span className="font-semibold text-[var(--text)] text-xs">
                     {APP_VERSION}
-                    {APP_VERSION === '1.0.0' && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                        fallback
-                      </span>
-                    )}
                   </span>
                 </div>
 

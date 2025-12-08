@@ -9,14 +9,11 @@ import {
   Tags,
   Users,
   X,
-  AlertCircle,
   Wifi,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useInstanceStatus } from "@/lib/useInstanceStatus";
-import dynamic from "next/dynamic";
-const InstanceModal = dynamic(() => import("@/components/InstanceModal").then((mod) => mod.default), { ssr: false });
+import { useFirstInstanceStatus } from "@/lib/useFirstInstanceStatus";
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -35,9 +32,8 @@ export default function Sidebar({
   onClose?: () => void;
 } = {}) {
   const pathname = usePathname();
-  const { data: status, refetch: statusRefetch } = useInstanceStatus();
   const [mounted, setMounted] = useState(false);
-  const [instanceModalOpen, setInstanceModalOpen] = useState(false);
+  const { instance, loading } = useFirstInstanceStatus();
 
   useEffect(() => {
     setMounted(true);
@@ -75,36 +71,17 @@ export default function Sidebar({
           </div>
           <div className="flex-1">
             <h1 className="text-xl font-bold text-white">Envio Express</h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {mounted && status ? (
-                <>
-                  <div
-                    className={`w-2 h-2 rounded-full ${status.status === "online"
-                      ? "bg-green-400 animate-pulse"
-                      : "bg-red-400"
-                      }`}
-                  />
-                  <span className="text-xs text-slate-400">
-                    {status.status === "online" ? "Online" : "Offline"}
-                    {status.instancia && ` • ${status.instancia}`}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                  <span className="text-xs text-slate-400">Verificando...</span>
-                </>
-              )}
-            </div>
           </div>
         </div>
-
-        {mounted && status && status.status !== "online" && (
-          <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-700/30 rounded-lg flex items-center gap-2">
-            <AlertCircle size={14} className="text-yellow-400 shrink-0" />
-            <span className="text-xs text-yellow-300">Instância desconectada</span>
-          </div>
-        )}
+        <div className="mt-3 flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full ${instance?.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
+              }`}
+          />
+          <span className="text-xs text-slate-400">
+            {loading ? "Verificando..." : instance?.status === "online" ? "WhatsApp Online" : "WhatsApp Offline"}
+          </span>
+        </div>
       </div>
 
       <nav className="flex-1 py-6 px-3 overflow-y-auto space-y-1">
@@ -146,15 +123,6 @@ export default function Sidebar({
       <div className="p-4 border-t border-indigo-900/20 mt-auto bg-linear-to-r from-slate-800/30 to-slate-900/30 space-y-2">
         <button
           type="button"
-          onClick={() => setInstanceModalOpen(true)}
-          className="flex items-center gap-3 w-full px-4 py-3 text-slate-300 hover:bg-cyan-600/20 hover:text-cyan-300 rounded-lg transition-all duration-200 group"
-        >
-          <Wifi size={20} className="group-hover:text-cyan-400" />
-          <span className="text-sm font-medium">Conectar Instância</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => {
             handleLogout();
           }}
@@ -164,7 +132,7 @@ export default function Sidebar({
           <span className="text-sm font-medium">Sair</span>
         </button>
       </div>
-    </div>
+    </div >
   );
 
   return (
@@ -179,9 +147,6 @@ export default function Sidebar({
           </div>
         </div>
       )}
-
-      {/* Instance Modal */}
-      <InstanceModal isOpen={instanceModalOpen} onClose={() => setInstanceModalOpen(false)} refetchStatus={statusRefetch} />
     </>
   );
 }
