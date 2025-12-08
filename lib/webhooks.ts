@@ -7,10 +7,11 @@ export const WEBHOOKS = {
     process.env.WEBHOOK_URL || process.env.N8N_WEBHOOK_ENVIAR_MENSAGEM,
 
   // Instance management
+  CRIAR_INSTANCIA: process.env.N8N_WEBHOOK_CRIAR_INSTANCIA,
   VERIFICAR_INSTANCIA: process.env.N8N_WEBHOOK_VERIFICAR_INSTANCIA,
   CONECTAR_INSTANCIA: process.env.N8N_WEBHOOK_CONECTAR_INSTANCIA,
   DESCONECTAR_INSTANCIA: process.env.N8N_WEBHOOK_DESCONECTAR_INSTANCIA,
-  REINICIAR_INSTANCIA: process.env.N8N_WEBHOOK_REINICIAR_INSTANCIA,
+  DELETAR_INSTANCIA: process.env.N8N_WEBHOOK_DELETAR_INSTANCIA,
 } as const;
 
 /**
@@ -29,10 +30,11 @@ export function validateWebhookConfig(): {
   missing: string[];
 } {
   const required = [
+    "CRIAR_INSTANCIA",
     "VERIFICAR_INSTANCIA",
     "CONECTAR_INSTANCIA",
     "DESCONECTAR_INSTANCIA",
-    "REINICIAR_INSTANCIA",
+    "DELETAR_INSTANCIA",
   ] as const;
 
   const missing = required.filter((key) => !WEBHOOKS[key]);

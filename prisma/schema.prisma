@@ -18,6 +18,7 @@ model User {
     groups    Group[]
     selection Selection?
     templates MessageTemplate[]
+    instances Instance[]
 }
 
 model Contact {
@@ -82,4 +83,18 @@ model MessageTemplate {
     updatedAt DateTime @updatedAt
 
     @@unique([userId, name])
+}
+
+model Instance {
+    id           Int      @id @default(autoincrement())
+    userId       Int
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    instanceName String // Nome da instância (ex: "minha-instancia-1")
+    status       String   @default("disconnected") // "disconnected", "connecting", "online"
+    qrCode       String? // QR code para conexão
+    lastUpdate   DateTime @default(now())
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    @@unique([userId, instanceName])
 }

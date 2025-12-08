@@ -130,14 +130,29 @@ export function useInstanceManager(opts?: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/instance/connect", {
-        method: "GET",
-        signal,
-      });
+      // Buscar primeira instância do usuário para demo
+      const listRes = await fetch("/api/instances", { signal });
+      if (!listRes.ok) throw new Error(`Status ${listRes.status}`);
+      const listJson = (await listRes.json()) as Record<string, unknown>;
+      const instances = (listJson.instances ?? []) as Array<{ id?: number }>;
+      const firstInstance = instances[0];
+
+      if (!firstInstance || !firstInstance.id) {
+        // Nenhuma instância criada
+        const normalized = normalize(undefined);
+        if (!mountedRef.current) return normalized;
+        setData(normalized);
+        setLoading(false);
+        return normalized;
+      }
+
+      // Buscar status da primeira instância
+      const res = await fetch(`/api/instances/${firstInstance.id}`, { signal });
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const json = (await res.json()) as unknown;
       const j = json as Record<string, unknown>;
-      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const payload =
+        j && typeof j === "object" && "instance" in j ? j.instance : json;
       const normalized = normalize(payload);
       console.debug(
         "[useInstanceManager] raw payload:",
@@ -198,7 +213,19 @@ export function useInstanceManager(opts?: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/instance/connect", {
+      // Buscar primeira instância
+      const listRes = await fetch("/api/instances");
+      if (!listRes.ok) throw new Error(`Status ${listRes.status}`);
+      const listJson = (await listRes.json()) as Record<string, unknown>;
+      const instances = (listJson.instances ?? []) as Array<{ id?: number }>;
+      const firstInstance = instances[0];
+
+      if (!firstInstance || !firstInstance.id) {
+        throw new Error("Nenhuma instância criada");
+      }
+
+      // Conectar primeira instância
+      const res = await fetch(`/api/instances/${firstInstance.id}/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "connect" }),
@@ -206,7 +233,8 @@ export function useInstanceManager(opts?: {
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const json = (await res.json()) as unknown;
       const j = json as Record<string, unknown>;
-      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const payload =
+        j && typeof j === "object" && "instance" in j ? j.instance : json;
       const normalized = normalize(payload);
       console.debug(
         "[useInstanceManager] connect response:",
@@ -238,11 +266,45 @@ export function useInstanceManager(opts?: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/instance/restart", { method: "POST" });
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const json = (await res.json()) as unknown;
+      // Buscar primeira instância
+      const listRes = await fetch("/api/instances");
+      if (!listRes.ok) throw new Error(`Status ${listRes.status}`);
+      const listJson = (await listRes.json()) as Record<string, unknown>;
+      const instances = (listJson.instances ?? []) as Array<{ id?: number }>;
+      const firstInstance = instances[0];
+
+      if (!firstInstance || !firstInstance.id) {
+        throw new Error("Nenhuma instância criada");
+      }
+
+      // Desconectar e reconectar
+      const disconnectRes = await fetch(
+        `/api/instances/${firstInstance.id}/connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "disconnect" }),
+        }
+      );
+      if (!disconnectRes.ok) throw new Error(`Status ${disconnectRes.status}`);
+
+      // Aguardar um pouco antes de reconectar
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const reconnectRes = await fetch(
+        `/api/instances/${firstInstance.id}/connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "connect" }),
+        }
+      );
+      if (!reconnectRes.ok) throw new Error(`Status ${reconnectRes.status}`);
+
+      const json = (await reconnectRes.json()) as unknown;
       const j = json as Record<string, unknown>;
-      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const payload =
+        j && typeof j === "object" && "instance" in j ? j.instance : json;
       const normalized = normalize(payload);
       console.debug(
         "[useInstanceManager] restart response:",
@@ -274,7 +336,19 @@ export function useInstanceManager(opts?: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/instance/connect", {
+      // Buscar primeira instância
+      const listRes = await fetch("/api/instances");
+      if (!listRes.ok) throw new Error(`Status ${listRes.status}`);
+      const listJson = (await listRes.json()) as Record<string, unknown>;
+      const instances = (listJson.instances ?? []) as Array<{ id?: number }>;
+      const firstInstance = instances[0];
+
+      if (!firstInstance || !firstInstance.id) {
+        throw new Error("Nenhuma instância criada");
+      }
+
+      // Desconectar primeira instância
+      const res = await fetch(`/api/instances/${firstInstance.id}/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "disconnect" }),
@@ -282,7 +356,8 @@ export function useInstanceManager(opts?: {
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const json = (await res.json()) as unknown;
       const j = json as Record<string, unknown>;
-      const payload = j && typeof j === "object" && "data" in j ? j.data : json;
+      const payload =
+        j && typeof j === "object" && "instance" in j ? j.instance : json;
       const normalized = normalize(payload);
       console.debug(
         "[useInstanceManager] disconnect response:",

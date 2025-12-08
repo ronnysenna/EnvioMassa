@@ -63,7 +63,31 @@ export function useInstanceStatus(pollMs = 5000) {
     if (!mountedRef.current) return null;
     if (mountedRef.current) setLoading(true);
     try {
-      const res = await fetch("/api/instance/webhook", { method: "GET" });
+      // Buscar primeira instância
+      const listRes = await fetch("/api/instances", { method: "GET" });
+      if (!listRes.ok) {
+        const err = await listRes.json().catch(() => ({}));
+        if (mountedRef.current)
+          setError(err?.error ?? "Erro ao buscar instâncias");
+        return null;
+      }
+      const listJson = (await listRes.json()) as Record<string, unknown>;
+      const instances = (listJson.instances ?? []) as Array<{ id?: number }>;
+      const firstInstance = instances[0];
+
+      if (!firstInstance || !firstInstance.id) {
+        // Nenhuma instância
+        if (mountedRef.current) {
+          setData(null);
+          setError(null);
+        }
+        return null;
+      }
+
+      // Buscar status da primeira instância
+      const res = await fetch(`/api/instances/${firstInstance.id}`, {
+        method: "GET",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         if (mountedRef.current) setError(err?.error ?? "Erro ao buscar status");
@@ -73,7 +97,9 @@ export function useInstanceStatus(pollMs = 5000) {
       // debug logs
       // eslint-disable-next-line no-console
       console.debug("[useInstanceStatus] raw:", json);
-      const normalized = normalize(json?.data ?? json ?? null);
+      const normalized = normalize(
+        json?.instance ?? json?.data ?? json ?? null
+      );
       if (mountedRef.current) {
         setData(normalized);
         setError(null);

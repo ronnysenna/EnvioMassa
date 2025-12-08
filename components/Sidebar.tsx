@@ -24,6 +24,7 @@ const menuItems = [
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/grupos", label: "Grupos", icon: Tags },
   { href: "/imagem", label: "Upload de Imagem", icon: ImageIcon },
+  { href: "/instancias", label: "Instâncias WhatsApp", icon: Wifi },
 ];
 
 export default function Sidebar({
@@ -34,7 +35,7 @@ export default function Sidebar({
   onClose?: () => void;
 } = {}) {
   const pathname = usePathname();
-  const { data: status, refetch: statusRefetch, loading: statusLoading, error: statusError } = useInstanceStatus();
+  const { data: status, refetch: statusRefetch } = useInstanceStatus();
   const [mounted, setMounted] = useState(false);
   const [instanceModalOpen, setInstanceModalOpen] = useState(false);
 
