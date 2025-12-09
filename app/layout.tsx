@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-(--bg) text-(--text) overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--bg)] text-[var(--text)] overflow-x-hidden`}
       >
         <ClientProviders>
           <LayoutShell>{children}</LayoutShell>

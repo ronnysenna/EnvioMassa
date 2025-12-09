@@ -24,6 +24,9 @@ export default function LayoutShell({
 
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
+  // Forçar fundo claro somente na página de webhooks (evita alterar Sidebar globalmente)
+  const isWebhooks = pathname ? pathname.startsWith("/settings/webhooks") : false;
+
   if (hideShell) {
     return <>{children}</>;
   }
@@ -43,7 +46,7 @@ export default function LayoutShell({
           <Menu size={24} />
         </button>
 
-        <main className="flex-1 p-4 sm:p-6 pb-[env(safe-area-inset-bottom)] pt-16 md:pt-4">
+        <main className="flex-1 p-4 sm:p-6 pb-[env(safe-area-inset-bottom)] pt-16 md:pt-4" style={isWebhooks ? { background: 'var(--bg)' } : undefined}>
           {children}
         </main>
         <footer className="mt-auto">

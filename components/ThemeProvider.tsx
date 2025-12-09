@@ -13,32 +13,24 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    try {
-      const v = localStorage.getItem("theme");
-      return (v as Theme) || "light";
-    } catch {
-      return "light";
-    }
-  });
+  // Forçar tema claro independentemente do navegador/sistema
+  const [theme, setThemeState] = useState<Theme>(() => "light");
 
   useEffect(() => {
     try {
-      localStorage.setItem("theme", theme);
+      // Sempre salvar 'light' e remover qualquer classe 'dark' no <html>
+      localStorage.setItem("theme", "light");
       const el = document.documentElement;
-      if (theme === "dark") {
-        el.classList.add("dark");
-      } else {
-        el.classList.remove("dark");
-      }
+      el.classList.remove("dark");
     } catch (_e) {
       // ignore
     }
-  }, [theme]);
+    // executa apenas uma vez
+  }, []);
 
   const setTheme = (t: Theme) => setThemeState(t);
-  const toggleTheme = () =>
-    setThemeState((s) => (s === "dark" ? "light" : "dark"));
+  // Impedir ativação do tema escuro: toggle força 'light'
+  const toggleTheme = () => setThemeState("light");
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
