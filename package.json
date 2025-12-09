@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/generate-version.js && next dev",
-    "build": "node scripts/generate-version.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
     "test-webhook": "node scripts/test-instance-webhook.js",
-    "test-webhook-post": "node scripts/test-webhook-post.js"
+    "test-webhook-post": "node scripts/test-webhook-post.js",
+    "docker:build": "bash scripts/build-docker.sh",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.916.0",
