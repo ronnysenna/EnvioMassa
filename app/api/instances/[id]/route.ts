@@ -112,7 +112,16 @@ export async function DELETE(_req: Request, context: NextContextWithParams) {
 
     // Chamar webhook de deleção
     try {
-      const deleteWebhookUrl = getWebhookUrl("DELETAR_INSTANCIA");
+      // Buscar webhooks customizados do usuário
+      const userWebhooks = {
+        webhookSendMessage: user.webhookSendMessage,
+        webhookCreateInstance: user.webhookCreateInstance,
+        webhookVerifyInstance: user.webhookVerifyInstance,
+        webhookConnectInstance: user.webhookConnectInstance,
+        webhookDeleteInstance: user.webhookDeleteInstance,
+      };
+
+      const deleteWebhookUrl = getWebhookUrl("DELETAR_INSTANCIA", userWebhooks);
       await fetch(deleteWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,7 +131,7 @@ export async function DELETE(_req: Request, context: NextContextWithParams) {
         }),
       });
       // Webhook delete called
-    } catch (webhookErr) {
+    } catch {
       // Webhook error - continue with deletion
     }
 

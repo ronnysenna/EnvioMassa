@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Home,
   Image as ImageIcon,
@@ -10,6 +9,7 @@ import {
   Users,
   X,
   Wifi,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +22,7 @@ const menuItems = [
   { href: "/grupos", label: "Grupos", icon: Tags },
   { href: "/imagem", label: "Upload de Imagem", icon: ImageIcon },
   { href: "/instancias", label: "Instâncias WhatsApp", icon: Wifi },
+  { href: "/settings/webhooks", label: "Webhooks", icon: Settings },
 ];
 
 export default function Sidebar({
@@ -32,12 +33,7 @@ export default function Sidebar({
   onClose?: () => void;
 } = {}) {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
   const { instance, loading } = useFirstInstanceStatus();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -45,7 +41,7 @@ export default function Sidebar({
         method: "POST",
         credentials: "include",
       });
-    } catch (error) {
+    } catch {
       // Logout error - continue to login page
     } finally {
       window.location.replace("/login");

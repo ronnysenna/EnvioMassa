@@ -1,5 +1,6 @@
 /**
- * Centralized webhook URLs configuration
+ * Centralized webhook URLs configuration (DEFAULTS)
+ * Esses são webhooks padrão usados apenas se o usuário não configurar os seus
  */
 export const WEBHOOKS = {
   // Message sending
@@ -21,6 +22,29 @@ export const EVOLUTION_API = {
   BASE_URL: process.env.EVOLUTION_API_URL,
   API_KEY: process.env.EVOLUTION_API_KEY,
 } as const;
+
+/**
+ * Mapeia tipos de webhook para campos do usuário
+ */
+const webhookFieldMap: Record<keyof typeof WEBHOOKS, keyof UserWebhooks> = {
+  ENVIAR_MENSAGEM: "webhookSendMessage",
+  CRIAR_INSTANCIA: "webhookCreateInstance",
+  VERIFICAR_INSTANCIA: "webhookVerifyInstance",
+  CONECTAR_INSTANCIA: "webhookConnectInstance",
+  DESCONECTAR_INSTANCIA: "webhookDeleteInstance",
+  DELETAR_INSTANCIA: "webhookDeleteInstance",
+};
+
+/**
+ * Interface para tipos de webhooks do usuário
+ */
+export interface UserWebhooks {
+  webhookSendMessage: string | null;
+  webhookCreateInstance: string | null;
+  webhookVerifyInstance: string | null;
+  webhookConnectInstance: string | null;
+  webhookDeleteInstance: string | null;
+}
 
 /**
  * Validates that all required webhook URLs are configured
@@ -46,12 +70,33 @@ export function validateWebhookConfig(): {
 }
 
 /**
- * Gets a webhook URL with validation
+ * Gets a webhook URL com suporte a webhooks customizados do usuário
+ * Webhooks customizados são OBRIGATÓRIOS
  */
-export function getWebhookUrl(name: keyof typeof WEBHOOKS): string {
-  const url = WEBHOOKS[name];
-  if (!url) {
+export function getWebhookUrl(
+  name: keyof typeof WEBHOOKS,
+  userWebhooks?: UserWebhooks | null
+): string {
+  // Se temos webhooks customizados do usuário, usar
+  if (userWebhooks) {
+    const fieldKey = webhookFieldMap[name];
+    const userWebhook = userWebhooks[fieldKey];
+    if (userWebhook) {
+      return userWebhook;
+    }
+  }
+
+  // Se chegou aqui e é webhook de envio, erro obrigatório
+  if (name === "ENVIAR_MENSAGEM") {
+    throw new Error(
+      "Webhook de envio de mensagens é obrigatório. Configure em Webhooks nas configurações."
+    );
+  }
+
+  // Para outros webhooks, fallback para padrão (não usados em settings, apenas internos)
+  const defaultWebhook = WEBHOOKS[name];
+  if (!defaultWebhook) {
     throw new Error(`Webhook URL not configured: N8N_WEBHOOK_${name}`);
   }
-  return url;
+  return defaultWebhook;
 }

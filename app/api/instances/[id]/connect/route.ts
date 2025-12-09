@@ -45,7 +45,19 @@ export async function POST(
 
       // Chamar webhook de conexão com o nome da instância
       try {
-        const connectWebhookUrl = getWebhookUrl("CONECTAR_INSTANCIA");
+        // Buscar webhooks customizados do usuário
+        const userWebhooks = {
+          webhookSendMessage: user.webhookSendMessage,
+          webhookCreateInstance: user.webhookCreateInstance,
+          webhookVerifyInstance: user.webhookVerifyInstance,
+          webhookConnectInstance: user.webhookConnectInstance,
+          webhookDeleteInstance: user.webhookDeleteInstance,
+        };
+
+        const connectWebhookUrl = getWebhookUrl(
+          "CONECTAR_INSTANCIA",
+          userWebhooks
+        );
         const res = await fetch(connectWebhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -86,15 +98,27 @@ export async function POST(
             );
           }
         }
-      } catch (err) {
-        console.error("Erro ao chamar webhook de conexão:", err);
+      } catch {
+        console.error("Erro ao chamar webhook de conexão");
       }
 
       return NextResponse.json({ instance: updated });
     } else if (action === "disconnect") {
       // Chamar webhook de desconexão
       try {
-        const disconnectWebhookUrl = getWebhookUrl("DESCONECTAR_INSTANCIA");
+        // Buscar webhooks customizados do usuário
+        const userWebhooks = {
+          webhookSendMessage: user.webhookSendMessage,
+          webhookCreateInstance: user.webhookCreateInstance,
+          webhookVerifyInstance: user.webhookVerifyInstance,
+          webhookConnectInstance: user.webhookConnectInstance,
+          webhookDeleteInstance: user.webhookDeleteInstance,
+        };
+
+        const disconnectWebhookUrl = getWebhookUrl(
+          "DESCONECTAR_INSTANCIA",
+          userWebhooks
+        );
         await fetch(disconnectWebhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -103,7 +127,7 @@ export async function POST(
             userId: userId,
           }),
         });
-      } catch (err) {
+      } catch {
         // Webhook error - continue with disconnect
       }
 

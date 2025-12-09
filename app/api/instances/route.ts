@@ -77,7 +77,19 @@ export async function POST(req: Request) {
     // Chamar webhook para criar a instância no Evolution API
     let webhookSuccess = false;
     try {
-      const criarInstanciaWebhookUrl = getWebhookUrl("CRIAR_INSTANCIA");
+      // Buscar webhooks customizados do usuário
+      const userWebhooks = {
+        webhookSendMessage: user.webhookSendMessage,
+        webhookCreateInstance: user.webhookCreateInstance,
+        webhookVerifyInstance: user.webhookVerifyInstance,
+        webhookConnectInstance: user.webhookConnectInstance,
+        webhookDeleteInstance: user.webhookDeleteInstance,
+      };
+
+      const criarInstanciaWebhookUrl = getWebhookUrl(
+        "CRIAR_INSTANCIA",
+        userWebhooks
+      );
 
       const webhookResponse = await fetch(criarInstanciaWebhookUrl, {
         method: "POST",
@@ -91,7 +103,7 @@ export async function POST(req: Request) {
       if (webhookResponse.ok) {
         webhookSuccess = true;
       }
-    } catch (webhookError) {
+    } catch {
       // Webhook error - log only in development
     }
 

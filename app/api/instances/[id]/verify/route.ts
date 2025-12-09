@@ -40,7 +40,19 @@ export async function POST(
 
     // Chamar webhook de verificação
     try {
-      const verifyWebhookUrl = getWebhookUrl("VERIFICAR_INSTANCIA");
+      // Buscar webhooks customizados do usuário
+      const userWebhooks = {
+        webhookSendMessage: user.webhookSendMessage,
+        webhookCreateInstance: user.webhookCreateInstance,
+        webhookVerifyInstance: user.webhookVerifyInstance,
+        webhookConnectInstance: user.webhookConnectInstance,
+        webhookDeleteInstance: user.webhookDeleteInstance,
+      };
+
+      const verifyWebhookUrl = getWebhookUrl(
+        "VERIFICAR_INSTANCIA",
+        userWebhooks
+      );
 
       const res = await fetch(verifyWebhookUrl, {
         method: "POST",
@@ -92,7 +104,7 @@ export async function POST(
           { status: 200 }
         );
       }
-    } catch (webhookError) {
+    } catch {
       return NextResponse.json(
         {
           connected: false,

@@ -8,11 +8,19 @@ generator client {
 }
 
 model User {
-    id        Int               @id @default(autoincrement())
-    username  String            @unique
+    id        Int      @id @default(autoincrement())
+    username  String   @unique
     password  String
-    role      String            @default("user")
-    createdAt DateTime          @default(now())
+    role      String   @default("user")
+    createdAt DateTime @default(now())
+
+    // Webhooks customizados por usuário
+    webhookSendMessage     String?
+    webhookCreateInstance  String?
+    webhookVerifyInstance  String?
+    webhookConnectInstance String?
+    webhookDeleteInstance  String?
+
     contacts  Contact[]
     images    Image[]
     groups    Group[]

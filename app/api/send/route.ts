@@ -9,7 +9,16 @@ export async function POST(req: Request) {
   try {
     const user = await requireUser();
 
-    const webhookUrl = getWebhookUrl("ENVIAR_MENSAGEM");
+    // Buscar webhooks customizados do usuário
+    const userWebhooks = {
+      webhookSendMessage: user.webhookSendMessage,
+      webhookCreateInstance: user.webhookCreateInstance,
+      webhookVerifyInstance: user.webhookVerifyInstance,
+      webhookConnectInstance: user.webhookConnectInstance,
+      webhookDeleteInstance: user.webhookDeleteInstance,
+    };
+
+    const webhookUrl = getWebhookUrl("ENVIAR_MENSAGEM", userWebhooks);
     if (!webhookUrl) {
       return NextResponse.json(
         { error: "Webhook URL not configured for sending messages" },
