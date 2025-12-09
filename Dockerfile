@@ -3,22 +3,18 @@
 FROM node:20-bullseye-slim AS builder
 WORKDIR /app
 
-# Build args for version and environment
-ARG COMMIT_SHA=dev
+# Allow overriding NODE_ENV and npm production flag at build time
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}
 ARG NPM_CONFIG_PRODUCTION=false
 ENV NPM_CONFIG_PRODUCTION=${NPM_CONFIG_PRODUCTION}
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build-time PUBLIC environment variables
+# Build-time PUBLIC environment variables (only expose NEXT_PUBLIC_* that are safe for the client)
 ARG NEXT_PUBLIC_BASE_URL
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 ARG NEXT_PUBLIC_CONFIRM_THRESHOLD
 ENV NEXT_PUBLIC_CONFIRM_THRESHOLD=${NEXT_PUBLIC_CONFIRM_THRESHOLD}
-# Set app version from package.json version + commit SHA
-ARG NEXT_PUBLIC_APP_VERSION=1.0.1-dev
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # copy package files and install deps
 COPY package.json package-lock.json* ./
@@ -29,8 +25,9 @@ COPY prisma ./prisma
 COPY scripts ./scripts
 COPY . .
 
-# Generate prisma client and build Next.js
-RUN npx prisma generate && \
+# Generate version automatically and generate prisma client
+RUN node scripts/generate-version.js && \
+    npx prisma generate && \
     npm run build
 
 # Runner stage
@@ -39,8 +36,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-
-# Inherit version from build stage
+# Inherit version from build stage (already embedded in .next)
 ARG NEXT_PUBLIC_APP_VERSION=1.0.1-dev
 ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
