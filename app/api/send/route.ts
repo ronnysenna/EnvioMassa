@@ -35,40 +35,35 @@ export async function POST(req: Request) {
       );
     }
 
-    // Extrair apenas o caminho da URL da imagem (/api/uploads/filename)
-    // Se não houver imagem, usar "sem-imagem"
-    let imagemPath = "sem-imagem";
-    if (imageUrl && typeof imageUrl === "string") {
-      // Se for URL completa, extrair apenas o pathname
-      if (imageUrl.includes("://")) {
-        try {
-          const url = new URL(imageUrl);
-          imagemPath = url.pathname; // Resultado: /api/download/1761503198117-PM.jpg
-        } catch {
-          imagemPath = "sem-imagem";
-        }
-      } else {
-        // Se já for um caminho, usar como está
-        imagemPath = imageUrl;
-      }
-    }
-
-    // build payload to n8n com contatos selecionados em estrutura organizada
     // Construir URL completa da imagem (para N8N conseguir fazer download)
+    // - Se client enviou uma URL absoluta (ex.: S3), usar diretamente essa URL
+    // - Se client enviou um caminho relativo (ex.: /api/uploads/...), montar usando baseUrl
     let imagemUrlCompleta = "sem-imagem";
-    if (imagemPath !== "sem-imagem") {
-      // Em produção no Easypanel, usar URL base do ambiente
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        (() => {
-          const protocol = req.headers.get("x-forwarded-proto") || "https";
-          const host =
-            req.headers.get("x-forwarded-host") ||
-            req.headers.get("host") ||
-            "localhost:3000";
-          return `${protocol}://${host}`;
-        })();
-      imagemUrlCompleta = `${baseUrl}${imagemPath}`;
+    if (imageUrl && typeof imageUrl === "string") {
+      try {
+        if (imageUrl.includes("://")) {
+          // URL absoluta — enviar como veio
+          imagemUrlCompleta = imageUrl;
+        } else {
+          // caminho relativo — montar com base URL do servidor
+          const baseUrl =
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            (() => {
+              const protocol = req.headers.get("x-forwarded-proto") || "https";
+              const host =
+                req.headers.get("x-forwarded-host") ||
+                req.headers.get("host") ||
+                "localhost:3000";
+              return `${protocol}://${host}`;
+            })();
+          const pathValue = imageUrl.startsWith("/")
+            ? imageUrl
+            : `/${imageUrl}`;
+          imagemUrlCompleta = `${baseUrl}${pathValue}`;
+        }
+      } catch {
+        imagemUrlCompleta = "sem-imagem";
+      }
     }
 
     // Buscar primeira instância conectada do usuário
