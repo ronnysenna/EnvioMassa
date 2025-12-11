@@ -53,8 +53,13 @@ COPY --from=builder /app/prisma ./prisma
 # Criar diretório de uploads e definir permissões
 RUN mkdir -p /app/public/uploads && chmod 755 /app/public/uploads
 
+# Copiar script de entrypoint
+COPY scripts/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Volume para persistência de uploads entre restarts
 VOLUME ["/app/public/uploads"]
 
 EXPOSE 3000
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]

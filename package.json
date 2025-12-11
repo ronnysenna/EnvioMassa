@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/generate-version.js && next dev",
-    "build": "node scripts/generate-version.js && next build",
+    "build": "node scripts/generate-version.js && prisma generate && next build",
+    "postbuild": "prisma db push --accept-data-loss --skip-generate",
     "start": "next start",
+    "deploy": "prisma generate && prisma db push --accept-data-loss && npm run build && npm run start",
+    "migrate:prod": "prisma db push --accept-data-loss",
     "lint": "biome check",
     "format": "biome format --write",
     "test-webhook": "node scripts/test-instance-webhook.js",
