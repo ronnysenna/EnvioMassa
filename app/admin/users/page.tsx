@@ -332,7 +332,7 @@ export default function AdminUsersPage() {
                     <h3 className="font-semibold text-[var(--text)]">
                       {user.nome}
                     </h3>
-                    <Badge variant={user.role === "admin" ? "success" : "default"}>
+                    <Badge variant={user.role === "admin" ? "success" : "info"}>
                       {user.role === "admin" ? (
                         <>
                           <Shield size={12} className="mr-1" />

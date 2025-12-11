@@ -185,7 +185,7 @@ export default function PerfilPage() {
               Informações Pessoais
             </h2>
             <div className="flex items-center gap-2">
-              <Badge variant={user.role === "admin" ? "success" : "default"}>
+              <Badge variant={user.role === "admin" ? "success" : "info"}>
                 {user.role === "admin" ? (
                   <>
                     <Shield size={12} className="mr-1" />
