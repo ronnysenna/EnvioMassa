@@ -9,12 +9,14 @@ Este projeto agora executa migrações de banco de dados **automaticamente** dur
 ### 1. **Durante o Build** (`npm run build`)
 - Gera o Prisma Client
 - Compila a aplicação Next.js
-- Após o build, executa `postbuild` que aplica as migrações
+- **NÃO** aplica migrações (não tem acesso ao banco ainda)
 
-### 2. **No Docker/Container** 
+### 2. **No Docker/Container** (⭐ AQUI QUE A MÁGICA ACONTECE)
 - O script `docker-entrypoint.sh` é executado antes de iniciar
 - Aplica migrações automaticamente: `prisma db push --accept-data-loss`
 - Inicia o servidor Next.js
+
+**✅ As migrações rodam AUTOMATICAMENTE toda vez que o container reinicia!**
 
 ### 3. **Scripts Disponíveis**
 
@@ -37,18 +39,20 @@ npm run migrate:prod
 ```
 1. Git Push
    ↓
-2. Build da Aplicação
+2. Build da Aplicação (sem migração - não tem acesso ao banco)
    ↓
 3. Gerar Prisma Client
    ↓
-4. Aplicar Migrações (AUTOMÁTICO)
+4. Container Reinicia
    ↓
-5. Reiniciar Container
+5. ⭐ Entrypoint Executa (AUTOMÁTICO)
    ↓
-6. Aplicar Migrações de Novo (AUTOMÁTICO via entrypoint)
+6. ✅ Aplica Migrações (AUTOMÁTICO via docker-entrypoint.sh)
    ↓
-7. Iniciar Servidor
+7. Iniciar Servidor Next.js
 ```
+
+**🎯 IMPORTANTE:** As migrações rodam quando o **container inicia**, não durante o build!
 
 ## ⚙️ Configuração no Easypanel
 
