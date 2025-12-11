@@ -11,23 +11,28 @@ const IS_PROD = process.env.NODE_ENV === "production";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, password } = body;
-    if (!username || !password)
-      return NextResponse.json({ error: "Missing" }, { status: 400 });
+    const { email, password } = body;
+    if (!email || !password)
+      return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 });
 
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) return NextResponse.json({ error: "Invalid" }, { status: 401 });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: "Email ou senha inválidos" }, { status: 401 });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return NextResponse.json({ error: "Invalid" }, { status: 401 });
+    if (!match) return NextResponse.json({ error: "Email ou senha inválidos" }, { status: 401 });
 
     const token = jwt.sign(
-      { userId: user.id, username: user.username },
+      { userId: user.id, email: user.email },
       JWT_SECRET,
       { expiresIn: "7d" },
     );
 
-    const res = NextResponse.json({ id: user.id, username: user.username });
+    const res = NextResponse.json({ 
+      id: user.id, 
+      nome: user.nome,
+      email: user.email,
+      role: user.role
+    });
 
     // Hardened cookie attributes for stateless JWT
     const cookieOptions = {

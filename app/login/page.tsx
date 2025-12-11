@@ -10,7 +10,7 @@ import Link from "next/link";
 import { notifySuccess, notifyError } from "@/lib/notify";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
         credentials: "include",
       });
       const data = await res.json();
@@ -76,12 +76,12 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              id="username"
-              type="text"
-              label="Usuário"
-              placeholder="Digite seu usuário"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              label="Email"
+              placeholder="Digite seu email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
               required
             />
@@ -110,13 +110,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-[var(--border)]">
             <p className="text-center text-sm text-[var(--text-muted)]">
-              Não tem conta?{" "}
-              <Link
-                href="/register"
-                className="text-[var(--primary)] font-semibold hover:opacity-80 transition-opacity"
-              >
-                Criar conta
-              </Link>
+              Entre em contato com o administrador para criar sua conta
             </p>
           </div>
         </div>

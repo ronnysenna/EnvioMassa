@@ -26,9 +26,7 @@ function verifyJWT(token: string) {
 // Rotas que não precisam de autenticação
 const publicRoutes = [
   "/login",
-  "/register",
   "/api/auth/login",
-  "/api/auth/register",
 ];
 
 export function middleware(request: NextRequest) {

@@ -36,7 +36,9 @@ export async function GET() {
     return NextResponse.json({
       authenticated: true,
       id: user.id,
-      username: user.username,
+      nome: user.nome,
+      email: user.email,
+      role: user.role,
     });
   } catch (err) {
     return NextResponse.json(

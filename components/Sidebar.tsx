@@ -10,12 +10,15 @@ import {
   X,
   Wifi,
   Settings,
+  Shield,
+  User as UserIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFirstInstanceStatus } from "@/lib/useFirstInstanceStatus";
+import { useState, useEffect } from "react";
 
-const menuItems = [
+const baseMenuItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/enviar", label: "Enviar Mensagem", icon: Send },
   { href: "/contatos", label: "Contatos", icon: Users },
@@ -23,7 +26,18 @@ const menuItems = [
   { href: "/imagem", label: "Upload de Imagem", icon: ImageIcon },
   { href: "/instancias", label: "Instâncias WhatsApp", icon: Wifi },
   { href: "/settings/webhooks", label: "Webhooks", icon: Settings },
+  { href: "/perfil", label: "Meu Perfil", icon: UserIcon },
 ];
+
+const adminMenuItems = [
+  { href: "/admin/users", label: "Gerenciar Usuários", icon: Shield },
+];
+
+interface UserData {
+  nome: string;
+  email: string;
+  role: string;
+}
 
 export default function Sidebar({
   mobileOpen,
@@ -34,6 +48,33 @@ export default function Sidebar({
 } = {}) {
   const pathname = usePathname();
   const { instance, loading } = useFirstInstanceStatus();
+  const [user, setUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    // Buscar informações do usuário
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        if (data.authenticated) {
+          setUser({
+            nome: data.nome,
+            email: data.email,
+            role: data.role
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar usuário:", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Combinar menus base com menus de admin se o usuário for admin
+  const menuItems = user?.role === "admin" 
+    ? [...baseMenuItems, ...adminMenuItems] 
+    : baseMenuItems;
 
   const handleLogout = async () => {
     try {
@@ -69,6 +110,8 @@ export default function Sidebar({
             <h1 className="text-xl font-bold text-white">Envio Express</h1>
           </div>
         </div>
+        
+        {/* Status WhatsApp */}
         <div className="mt-3 flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${instance?.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
@@ -78,6 +121,21 @@ export default function Sidebar({
             {loading ? "Verificando..." : instance?.status === "online" ? "WhatsApp Online" : "WhatsApp Offline"}
           </span>
         </div>
+
+        {/* Usuário Conectado */}
+        {user && (
+          <div className="mt-3 pt-3 border-t border-indigo-900/20">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xs font-semibold shadow-lg">
+                {user.nome.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{user.nome}</p>
+                <p className="text-xs text-slate-400 truncate">{user.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 py-6 px-3 overflow-y-auto space-y-1">
@@ -91,6 +149,8 @@ export default function Sidebar({
             "/contatos": "group-hover:text-cyan-400 text-cyan-300",
             "/grupos": "group-hover:text-emerald-400 text-emerald-300",
             "/imagem": "group-hover:text-amber-400 text-amber-300",
+            "/perfil": "group-hover:text-teal-400 text-teal-300",
+            "/admin/users": "group-hover:text-purple-400 text-purple-300",
           };
 
           return (

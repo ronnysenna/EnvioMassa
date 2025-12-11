@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import prisma from "./prisma";
+import type { User } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
@@ -35,4 +36,23 @@ export async function requireUser() {
   if (!user) throw new Error("Unauthorized");
 
   return user;
+}
+
+/**
+ * Requer que o usuário autenticado seja administrador
+ * @throws Error se não autenticado ou não for admin
+ */
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") {
+    throw new Error("Forbidden: Admin access required");
+  }
+  return user;
+}
+
+/**
+ * Verifica se um usuário tem role de administrador
+ */
+export function isAdmin(user: User): boolean {
+  return user.role === "admin";
 }
